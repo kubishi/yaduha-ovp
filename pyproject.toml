@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "yaduha-ovp"
+version = "0.1.0"
+description = "Owens Valley Paiute language package for the Yaduha framework"
+requires-python = ">=3.10"
+dependencies = [
+    "yaduha>=0.3",
+]
+
+[project.entry-points."yaduha.languages"]
+ovp = "yaduha_ovp:language"
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.uv.sources]
+yaduha = { path = "yaduha-2", editable = true }

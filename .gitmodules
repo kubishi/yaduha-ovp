@@ -1,0 +1,4 @@
+[submodule "yaduha-2"]
+	path = yaduha-2
+	url = https://github.com/kubishi/yaduha-2.git
+	branch = main
