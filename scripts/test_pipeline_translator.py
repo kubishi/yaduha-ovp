@@ -22,11 +22,11 @@ MODELS = {
         "gpt-4o",
         "gpt-4o-mini",
     ],
-    # "anthropic": [
-    #     "claude-sonnet-4-5",
-    #     "claude-sonnet-4-20250514",
-    #     "claude-3-haiku-20240307",
-    # ],
+    "anthropic": [
+        "claude-sonnet-4-5",
+        "claude-sonnet-4-20250514",
+        "claude-3-haiku-20240307",
+    ],
     # "ollama": [
     #     "deepseek-r1:70b",
     #     "mixtral:8x22b",
