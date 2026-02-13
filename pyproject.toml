@@ -18,6 +18,3 @@ ovp = "yaduha_ovp:language"
 dev = [
     "pytest>=7.0",
 ]
-
-[tool.uv.sources]
-yaduha = { path = "yaduha-2", editable = true }
