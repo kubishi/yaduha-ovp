@@ -2,6 +2,7 @@ from yaduha.language import VocabEntry
 
 NOUNS = [
     VocabEntry(english="coyote", target="isha'"),
+    VocabEntry(english="vulture", target="wiho\"),
     VocabEntry(english="dog", target="ishapugu"),
     VocabEntry(english="cat", target="kidi'"),
     VocabEntry(english="horse", target="pugu"),
