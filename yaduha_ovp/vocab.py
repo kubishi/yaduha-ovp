@@ -75,6 +75,7 @@ INTRANSITIVE_VERBS = [
     VocabEntry(english="climb", target="tsibui"),
     VocabEntry(english="play", target="tübinohi"),
     VocabEntry(english="fly", target="yotsi"),
+    VocabEntry(english="jump", target="yotsi"),
     VocabEntry(english="dance", target="nüga"),
     VocabEntry(english="swim", target="pahabi"),
     VocabEntry(english="read", target="tünia"),
