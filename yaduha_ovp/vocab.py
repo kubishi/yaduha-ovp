@@ -36,6 +36,7 @@ NOUNS = [
     VocabEntry(english="fish", target="pagwi"),
     VocabEntry(english="tail", target="kwadzi"),
     VocabEntry(english="raccoon", target="padaka'i"),
+    VocabEntry(english="chipmunk", target="taba'ya"),
 ]
 
 TRANSITIVE_VERBS = [
