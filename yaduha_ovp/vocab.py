@@ -1,4 +1,39 @@
 from yaduha.language import VocabEntry
+from pydantic import BaseModel
+
+
+class KinshipTerm(BaseModel):
+    """
+    Owens Valley Paiute kinship terms with possessed and unpossessed forms.
+    
+    Kinship nouns are inherently possessed but have unpossessed citation forms.
+    They also take possessive prefixes and plural suffixes.
+    """
+    english: str
+    unpossessed: str  # citation form (e.g., "piabi" = mother)
+    possessed_stem: str  # stem for possessed forms (e.g., "bia")
+    
+    def get_possessed(self, possessor_prefix: str) -> str:
+        """Return the possessed form with a given prefix (e.g., 'i-' for 1sg)."""
+        return f"{possessor_prefix}{self.possessed_stem}"
+    
+    def get_plural(self, possessor_prefix: str, plural_suffix: str = "mü") -> str:
+        """Return the plural possessed form."""
+        return f"{possessor_prefix}{self.possessed_stem}{plural_suffix}"
+
+
+KINSHIP_TERMS = [
+    KinshipTerm(english="mother", unpossessed="piabi", possessed_stem="bia"),
+    # Add more family terms here as you discover them
+]
+
+# Possessor prefixes
+POSSESSIVE_PREFIXES = {
+    "1sg": "i-",   # my
+    "2sg": "ü-",   # your
+    "3sg": "ma-",  # his/her
+    # Add more as needed
+}
 
 NOUNS = [
     VocabEntry(english="coyote", target="isha'"),
