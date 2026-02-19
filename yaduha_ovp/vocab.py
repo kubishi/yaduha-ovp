@@ -82,23 +82,3 @@ INTRANSITIVE_VERBS = [
     VocabEntry(english="write", target="tümui"),
     VocabEntry(english="chirp", target="tsiipe'i"),
 ]
-
-# Kinship terms data - just the raw vocabulary
-KINSHIP_TERMS_DATA = [
-    {
-        "english": "mother",
-        "unpossessed": "piabi",
-        "possessed_stem": "bia",
-    },
-    # Add more as you learn them:
-    # {"english": "father", "unpossessed": "...", "possessed_stem": "..."},
-    # {"english": "grandmother", "unpossessed": "...", "possessed_stem": "..."},
-]
-
-# Possessive prefixes for kinship terms
-POSSESSIVE_PREFIXES = {
-    "1sg": "i-",   # my
-    "2sg": "ü-",   # your
-    "3sg": "ma-",  # his/her
-    # Add more as needed
-}
