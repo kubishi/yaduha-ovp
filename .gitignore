@@ -25,3 +25,8 @@ scripts/.env
 # OS
 .DS_Store
 Thumbs.db
+
+# Cloudflare Worker
+node_modules/
+.dev.vars
+.wrangler/

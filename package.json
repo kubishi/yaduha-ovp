@@ -1,0 +1,17 @@
+{
+  "name": "yaduha-ovp-api",
+  "private": true,
+  "description": "Cloudflare Worker proxy for Yaduha OVP API container",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.30"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.56.0"
+  }
+}
