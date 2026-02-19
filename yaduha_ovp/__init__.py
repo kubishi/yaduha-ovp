@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from typing import Dict, Generator, List, Optional, Tuple, Type, Union
 from enum import Enum
 from random import choice, randint
@@ -13,18 +13,26 @@ INTRANSITIVE_VERB_LOOKUP: Dict[str, VocabEntry] = {entry.english: entry for entr
 
 
 def get_noun_target(lemma: str) -> str:
-    return NOUN_LOOKUP[lemma].target
+    if lemma in NOUN_LOOKUP:
+        return NOUN_LOOKUP[lemma].target
+    return f"[{lemma}]"
 
 def get_transitive_verb_target(lemma: str) -> str:
-    return TRANSITIVE_VERB_LOOKUP[lemma].target
+    if lemma in TRANSITIVE_VERB_LOOKUP:
+        return TRANSITIVE_VERB_LOOKUP[lemma].target
+    return f"[{lemma}]"
 
 def get_intransitive_verb_target(lemma: str) -> str:
-    return INTRANSITIVE_VERB_LOOKUP[lemma].target
+    if lemma in INTRANSITIVE_VERB_LOOKUP:
+        return INTRANSITIVE_VERB_LOOKUP[lemma].target
+    return f"[{lemma}]"
 
 def get_verb_target(lemma: str) -> str:
     if lemma in TRANSITIVE_VERB_LOOKUP:
         return TRANSITIVE_VERB_LOOKUP[lemma].target
-    return INTRANSITIVE_VERB_LOOKUP[lemma].target
+    if lemma in INTRANSITIVE_VERB_LOOKUP:
+        return INTRANSITIVE_VERB_LOOKUP[lemma].target
+    return f"[{lemma}]"
 
 LENIS_MAP = {
     'p': 'b',
@@ -63,19 +71,10 @@ class Proximity(str, Enum):
         else:
             return "uu"
 
-class Person(str, Enum):
-    first = "first"
-    second = "second"
-    third = "third"
-
 class Plurality(str, Enum):
     singular = "singular"
     dual = "dual"
     plural = "plural"
-
-class Inclusivity(str, Enum):
-    inclusive = "inclusive"
-    exclusive = "exclusive"
 
 class TenseAspect(str, Enum):
     past_simple = "past_simple"
@@ -103,98 +102,70 @@ class TenseAspect(str, Enum):
 # PYDANTIC MODELS
 # ============================================================================
 
-class Pronoun(BaseModel):
-    person: Person
-    plurality: Plurality
-    proximity: Proximity
-    inclusivity: Inclusivity
-    reflexive: bool
+class Pronoun(str, Enum):
+    I = "I"
+    we_two = "we (two)"
+    we_inclusive = "we (inclusive)"
+    we_exclusive = "we (exclusive)"
+    you = "you"
+    you_all = "you (plural)"
+    he_she_it_proximal = "he/she/it (proximal)"
+    he_she_it_distal = "he/she/it (distal)"
+    they_proximal = "they (proximal)"
+    they_distal = "they (distal)"
+    reflexive = "self (reflexive)"
 
-    def get_subject_pronoun(self) -> str:
-        if self.person == Person.first:
-            if self.plurality == Plurality.singular:
-                return 'nüü'
-            elif self.plurality == Plurality.dual:
-                return 'taa'
-            elif self.plurality == Plurality.plural:
-                if self.inclusivity == Inclusivity.inclusive:
-                    return 'taagwa'
-                else:
-                    return 'nüügwa'
-        elif self.person == Person.second:
-            if self.plurality == Plurality.singular:
-                return 'üü'
-            else:
-                return 'üügwa'
-        elif self.person == Person.third:
-            if self.plurality == Plurality.singular:
-                if self.proximity == Proximity.proximal:
-                    return 'mahu'
-                else:
-                    return 'uhu'
-            else:
-                if self.proximity == Proximity.proximal:
-                    return 'mahuw̃a'
-                else:
-                    return 'uhuw̃a'
+SUBJECT_PRONOUNS: Dict[Pronoun, str] = {
+    Pronoun.I: 'nüü',
+    Pronoun.we_two: 'taa',
+    Pronoun.we_inclusive: 'taagwa',
+    Pronoun.we_exclusive: 'nüügwa',
+    Pronoun.you: 'üü',
+    Pronoun.you_all: 'üügwa',
+    Pronoun.he_she_it_proximal: 'mahu',
+    Pronoun.he_she_it_distal: 'uhu',
+    Pronoun.they_proximal: 'mahuw̃a',
+    Pronoun.they_distal: 'uhuw̃a',
+}
 
-        raise ValueError("Invalid pronoun configuration")
+OBJECT_PRONOUNS: Dict[Pronoun, str] = {
+    Pronoun.I: 'i',
+    Pronoun.we_two: 'ta',
+    Pronoun.we_inclusive: 'tei',
+    Pronoun.we_exclusive: 'ni',
+    Pronoun.you: 'ü',
+    Pronoun.you_all: 'üi',
+    Pronoun.he_she_it_proximal: 'a',
+    Pronoun.he_she_it_distal: 'u',
+    Pronoun.they_proximal: 'ai',
+    Pronoun.they_distal: 'ui',
+    Pronoun.reflexive: 'na',
+}
 
-    def get_object_pronoun(self) -> str:
-        if self.person == Person.first:
-            if self.plurality == Plurality.singular:
-                return 'i'
-            elif self.plurality == Plurality.dual:
-                return 'ta'
-            elif self.plurality == Plurality.plural:
-                if self.inclusivity == Inclusivity.inclusive:
-                    return 'tei'
-                else:
-                    return 'ni'
-        elif self.person == Person.second:
-            if self.plurality == Plurality.singular:
-                return 'ü'
-            else:
-                return 'üi'
-        elif self.person == Person.third:
-            if self.reflexive:
-                return 'na'
-            if self.plurality == Plurality.singular:
-                if self.proximity == Proximity.proximal:
-                    return 'a'
-                else:
-                    return 'u'
-            else:
-                if self.proximity == Proximity.proximal:
-                    return 'ai'
-                else:
-                    return 'ui'
-
-        raise ValueError("Invalid pronoun configuration")
+def _third_person_object_pronoun(proximity: Proximity, plurality: Plurality) -> Pronoun:
+    if plurality == Plurality.singular:
+        return Pronoun.he_she_it_proximal if proximity == Proximity.proximal else Pronoun.he_she_it_distal
+    else:
+        return Pronoun.they_proximal if proximity == Proximity.proximal else Pronoun.they_distal
 
 class Verb(BaseModel):
     lemma: str = Field(
         ...,
         json_schema_extra={
-            'enum': [entry.english for entry in TRANSITIVE_VERBS + INTRANSITIVE_VERBS],
-            'description': 'A verb lemma (transitive or intransitive)'
+            'description': 'A verb lemma (transitive or intransitive). '
+                f'Known verbs: {", ".join(entry.english for entry in TRANSITIVE_VERBS + INTRANSITIVE_VERBS)}. '
+                'If the exact verb is not in this list, use the English lemma as a placeholder.'
         }
     )
     tense_aspect: TenseAspect
-    
-    @field_validator('lemma')
-    @classmethod
-    def validate_lemma(cls, v: str) -> str:
-        if v not in TRANSITIVE_VERB_LOOKUP and v not in INTRANSITIVE_VERB_LOOKUP:
-            raise ValueError(f"Invalid verb: {v}")
-        return v
 
 class TransitiveVerb(Verb):
     lemma: str = Field(
         ...,
         json_schema_extra={
-            'enum': [entry.english for entry in TRANSITIVE_VERBS],
-            'description': 'A transitive verb lemma'
+            'description': 'A transitive verb lemma. '
+                f'Known transitive verbs: {", ".join(entry.english for entry in TRANSITIVE_VERBS)}. '
+                'If the exact verb is not in this list, use the English lemma as a placeholder.'
         }
     )
 
@@ -202,8 +173,9 @@ class IntransitiveVerb(Verb):
     lemma: str = Field(
         ...,
         json_schema_extra={
-            'enum': [entry.english for entry in INTRANSITIVE_VERBS],
-            'description': 'An intransitive verb lemma'
+            'description': 'An intransitive verb lemma. '
+                f'Known intransitive verbs: {", ".join(entry.english for entry in INTRANSITIVE_VERBS)}. '
+                'If the exact verb is not in this list, use the English lemma as a placeholder.'
         }
     )
 
@@ -211,69 +183,49 @@ class Noun(BaseModel):
     head: str = Field(
         ...,
         json_schema_extra={
-            'enum': [entry.english for entry in NOUNS],
-            'description': 'A noun lemma'
+            'description': 'A noun lemma. '
+                f'Known nouns: {", ".join(entry.english for entry in NOUNS)}. '
+                'If the exact noun is not in this list, use the English lemma as a placeholder.'
         }
     )
     possessive_determiner: Optional[Pronoun] = None
     proximity: Proximity
     plurality: Plurality
-    
-    @field_validator('head')
-    @classmethod
-    def validate_head(cls, v: str) -> str:
-        if v not in NOUN_LOOKUP:
-            raise ValueError(f"Invalid noun: {v}")
-        return v
 
 class SubjectNoun(Noun):
     pass
 
 class ObjectNoun(Noun):
     def get_matching_pronoun_prefix(self) -> str:
-        return Pronoun(
-            person=Person.third,
-            plurality=self.plurality,
-            proximity=self.proximity,
-            inclusivity=Inclusivity.exclusive,
-            reflexive=False
-        ).get_object_pronoun()
+        pronoun = _third_person_object_pronoun(self.proximity, self.plurality)
+        return OBJECT_PRONOUNS[pronoun]
 
 class SubjectVerbSentence(Sentence["SubjectVerbSentence"]):
     subject: Union[SubjectNoun, Pronoun]
-    verb: TransitiveVerb | IntransitiveVerb
+    verb: Union[TransitiveVerb, IntransitiveVerb]
 
     def __str__(self) -> str:
         subject_str = None
         if isinstance(self.subject, Pronoun):
-            subject_str = self.subject.get_subject_pronoun()
+            subject_str = SUBJECT_PRONOUNS[self.subject]
         elif isinstance(self.subject, SubjectNoun):
-            if isinstance(self.subject.head, Pronoun):
-                subject_str = None
-            else:
-                target_word = get_noun_target(self.subject.head)
-                subject_suffix = self.subject.proximity.get_subject_suffix()
-                subject_str = f"{target_word}-{subject_suffix}"
+            target_word = get_noun_target(self.subject.head)
+            subject_suffix = self.subject.proximity.get_subject_suffix()
+            subject_str = f"{target_word}-{subject_suffix}"
 
         verb_stem = get_verb_target(self.verb.lemma)
         verb_suffix = self.verb.tense_aspect.get_suffix()
         verb_str = f"{verb_stem}-{verb_suffix}"
 
         return f"{subject_str} {verb_str}"
-    
+
     @classmethod
     def sample_iter(cls, n: int) -> Generator['SubjectVerbSentence', None, None]:
         """Generate n sample sentences (string representations)"""
         for _ in range(n):
             # Random subject
             if randint(0, 1) == 0:
-                subject = Pronoun(
-                    person=choice(list(Person)),
-                    plurality=choice(list(Plurality)),
-                    proximity=choice(list(Proximity)),
-                    inclusivity=choice(list(Inclusivity)),
-                    reflexive=False
-                )
+                subject = choice(list(SUBJECT_PRONOUNS.keys()))
             else:
                 subject = SubjectNoun(
                     head=choice(list(NOUN_LOOKUP.keys())),
@@ -301,13 +253,7 @@ class SubjectVerbSentence(Sentence["SubjectVerbSentence"]):
             (
                 "I sleep.",
                 SubjectVerbSentence(
-                    subject=Pronoun(
-                        person=Person.first,
-                        plurality=Plurality.singular,
-                        proximity=Proximity.proximal,
-                        inclusivity=Inclusivity.exclusive,
-                        reflexive=False
-                    ),
+                    subject=Pronoun.I,
                     verb=IntransitiveVerb(
                         lemma="sleep",
                         tense_aspect=TenseAspect.present_simple
@@ -354,12 +300,11 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
     def __str__(self) -> str:
         object_pronoun_prefix = None
         if isinstance(self.object, Pronoun):
-            object_pronoun_prefix = self.object.get_object_pronoun()
+            object_pronoun_prefix = OBJECT_PRONOUNS[self.object]
         elif isinstance(self.object, ObjectNoun):
             object_pronoun_prefix = self.object.get_matching_pronoun_prefix()
 
         verb_stem = get_transitive_verb_target(self.verb.lemma) if self.object is not None else get_intransitive_verb_target(self.verb.lemma)
-        verb_str = ""
         verb_suffix = self.verb.tense_aspect.get_suffix()
         verb_stem = to_lenis(verb_stem)
         verb_str = f"{object_pronoun_prefix}-{verb_stem}-{verb_suffix}"
@@ -373,14 +318,11 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
 
         subject_str = None
         if isinstance(self.subject, Pronoun):
-            subject_str = self.subject.get_subject_pronoun()
+            subject_str = SUBJECT_PRONOUNS[self.subject]
         elif isinstance(self.subject, SubjectNoun):
-            if isinstance(self.subject.head, Pronoun):
-                subject_str = None
-            else:
-                target_word = get_noun_target(self.subject.head)
-                subject_suffix = self.subject.proximity.get_subject_suffix()
-                subject_str = f"{target_word}-{subject_suffix}"
+            target_word = get_noun_target(self.subject.head)
+            subject_suffix = self.subject.proximity.get_subject_suffix()
+            subject_str = f"{target_word}-{subject_suffix}"
 
         if object_str is None:
             return f"{verb_str} {subject_str}"
@@ -393,13 +335,7 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
         for _ in range(n):
             # Random subject
             if randint(0, 1) == 0:
-                subject = Pronoun(
-                    person=choice(list(Person)),
-                    plurality=choice(list(Plurality)),
-                    proximity=choice(list(Proximity)),
-                    inclusivity=choice(list(Inclusivity)),
-                    reflexive=False
-                )
+                subject = choice(list(SUBJECT_PRONOUNS.keys()))
             else:
                 subject = SubjectNoun(
                     head=choice(list(NOUN_LOOKUP.keys())),
@@ -422,13 +358,7 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
                     plurality=choice(list(Plurality))
                 )
             else:
-                obj = Pronoun(
-                    person=choice(list(Person)),
-                    plurality=choice(list(Plurality)),
-                    proximity=choice(list(Proximity)),
-                    inclusivity=choice(list(Inclusivity)),
-                    reflexive=False
-                )
+                obj = choice(list(OBJECT_PRONOUNS.keys()))
 
             yield cls(subject=subject, verb=verb, object=obj)
 
@@ -443,13 +373,7 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
             (
                 "You read the mountains.",
                 SubjectVerbObjectSentence(
-                    subject=Pronoun(
-                        person=Person.second,
-                        plurality=Plurality.singular,
-                        proximity=Proximity.distal,
-                        inclusivity=Inclusivity.exclusive,
-                        reflexive=False
-                    ),
+                    subject=Pronoun.you,
                     verb=TransitiveVerb(
                         lemma="read",
                         tense_aspect=TenseAspect.present_simple
@@ -473,13 +397,7 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
                         lemma="hear",
                         tense_aspect=TenseAspect.future_simple
                     ),
-                    object=Pronoun(
-                        person=Person.third,
-                        plurality=Plurality.singular,
-                        proximity=Proximity.distal,
-                        inclusivity=Inclusivity.exclusive,
-                        reflexive=False
-                    )
+                    object=Pronoun.he_she_it_distal
                 )
             ),
             (
