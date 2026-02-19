@@ -1,23 +1,25 @@
 import { Container, getContainer } from "@cloudflare/containers";
-
-interface Env {
-  YADUHA_CONTAINER: DurableObjectNamespace<YaduhaContainer>;
-  OPENAI_API_KEY: string;
-  ANTHROPIC_API_KEY: string;
-  GEMINI_API_KEY: string;
-  ALLOWED_ORIGINS: string;
-}
+import { env } from "cloudflare:workers";
 
 export class YaduhaContainer extends Container<Env> {
   defaultPort = 8000;
   sleepAfter = "5m";
+  envVars = {
+    OPENAI_API_KEY: env.OPENAI_API_KEY ?? "",
+    ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY ?? "",
+    GEMINI_API_KEY: env.GEMINI_API_KEY ?? "",
+  };
 
-  override get envVars(): Record<string, string> {
-    return {
-      OPENAI_API_KEY: this.env?.OPENAI_API_KEY ?? "",
-      ANTHROPIC_API_KEY: this.env?.ANTHROPIC_API_KEY ?? "",
-      GEMINI_API_KEY: this.env?.GEMINI_API_KEY ?? "",
-    };
+  override onStart() {
+    console.log("Yaduha container started");
+  }
+
+  override onStop() {
+    console.log("Yaduha container stopped");
+  }
+
+  override onError(error: unknown) {
+    console.error("Yaduha container error:", error);
   }
 }
 
@@ -27,10 +29,21 @@ export default {
       return handleCors(request, env, new Response(null, { status: 204 }));
     }
 
-    const container = getContainer(env.YADUHA_CONTAINER, "yaduha-api");
-    const response = await container.fetch(request);
-
-    return handleCors(request, env, response);
+    try {
+      const container = getContainer(env.YADUHA_CONTAINER, "yaduha-api");
+      const response = await container.fetch(request);
+      return handleCors(request, env, response);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return handleCors(
+        request,
+        env,
+        new Response(JSON.stringify({ error: msg }), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    }
   },
 };
 

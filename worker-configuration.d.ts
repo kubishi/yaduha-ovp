@@ -5,3 +5,7 @@ interface Env {
   GEMINI_API_KEY: string;
   ALLOWED_ORIGINS: string;
 }
+
+declare module "cloudflare:workers" {
+  const env: Env;
+}

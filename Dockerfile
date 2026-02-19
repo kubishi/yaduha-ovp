@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    "yaduha[api,agents] @ git+https://github.com/kubishi/yaduha-2.git"
+    "yaduha[all] @ git+https://github.com/kubishi/yaduha-2.git"
 
 COPY pyproject.toml ./
 COPY yaduha_ovp/ ./yaduha_ovp/
