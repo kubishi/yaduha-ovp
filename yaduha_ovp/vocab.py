@@ -2,6 +2,7 @@ from yaduha.language import VocabEntry
 
 NOUNS = [
     VocabEntry(english="coyote", target="isha'"),
+    VocabEntry(english="vulture", target="wiho"),
     VocabEntry(english="dog", target="ishapugu"),
     VocabEntry(english="cat", target="kidi'"),
     VocabEntry(english="horse", target="pugu"),
@@ -34,6 +35,9 @@ NOUNS = [
     VocabEntry(english="bear", target="pahabichi"),
     VocabEntry(english="fish", target="pagwi"),
     VocabEntry(english="tail", target="kwadzi"),
+    VocabEntry(english="raccoon", target="padaka'i"),
+    VocabEntry(english="chipmunk", target="taba'ya"),
+    VocabEntry(english="knife", target="wihi"),
 ]
 
 TRANSITIVE_VERBS = [
@@ -71,9 +75,30 @@ INTRANSITIVE_VERBS = [
     VocabEntry(english="climb", target="tsibui"),
     VocabEntry(english="play", target="tübinohi"),
     VocabEntry(english="fly", target="yotsi"),
+    VocabEntry(english="jump", target="yotsi"),
     VocabEntry(english="dance", target="nüga"),
     VocabEntry(english="swim", target="pahabi"),
     VocabEntry(english="read", target="tünia"),
     VocabEntry(english="write", target="tümui"),
     VocabEntry(english="chirp", target="tsiipe'i"),
 ]
+
+# Kinship terms data - just the raw vocabulary
+KINSHIP_TERMS_DATA = [
+    {
+        "english": "mother",
+        "unpossessed": "piabi",
+        "possessed_stem": "bia",
+    },
+    # Add more as you learn them:
+    # {"english": "father", "unpossessed": "...", "possessed_stem": "..."},
+    # {"english": "grandmother", "unpossessed": "...", "possessed_stem": "..."},
+]
+
+# Possessive prefixes for kinship terms
+POSSESSIVE_PREFIXES = {
+    "1sg": "i-",   # my
+    "2sg": "ü-",   # your
+    "3sg": "ma-",  # his/her
+    # Add more as needed
+}
