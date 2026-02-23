@@ -6,6 +6,7 @@ NOUNS = [
     VocabEntry(english="dog", target="ishapugu"),
     VocabEntry(english="cat", target="kidi'"),
     VocabEntry(english="horse", target="pugu"),
+    VocabEntry(english="mule", target="muuna'"),
     VocabEntry(english="rice", target="wai"),
     VocabEntry(english="pinenuts", target="tüba"),
     VocabEntry(english="corn", target="maishibü"),
