@@ -31,6 +31,7 @@ NOUNS = [
     VocabEntry(english="worm", target="wo'abi"),
     VocabEntry(english="squirrel", target="aingwü"),
     VocabEntry(english="bird", target="tsiipa"),
+    VocabEntry(english="eagle", target="kwina'a"),
     VocabEntry(english="earth", target="tüwoobü"),
     VocabEntry(english="coffee", target="koopi'"),
     VocabEntry(english="bear", target="pahabichi"),
