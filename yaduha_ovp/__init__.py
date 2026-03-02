@@ -424,8 +424,16 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
         return examples
 
 
+def _get_instructions() -> str:
+    from yaduha_ovp.prompts import get_prompt
+    return get_prompt(
+        include_vocab=True,
+        include_examples=(SubjectVerbSentence, SubjectVerbObjectSentence),
+    )
+
 language = Language(
     code="ovp",
     name="Owens Valley Paiute",
     sentence_types=(SubjectVerbSentence, SubjectVerbObjectSentence),
+    get_instructions=_get_instructions,
 )
