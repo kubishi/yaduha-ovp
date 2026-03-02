@@ -1,7 +1,8 @@
 from typing import Iterable, List, Type, TYPE_CHECKING
 from yaduha_ovp.vocab import NOUNS, TRANSITIVE_VERBS, INTRANSITIVE_VERBS
 from yaduha_ovp import (
-    LENIS_MAP, SubjectVerbSentence, SubjectVerbObjectSentence
+    LENIS_MAP, SUBJECT_PRONOUNS, OBJECT_PRONOUNS,
+    SubjectVerbSentence, SubjectVerbObjectSentence,
 )
 
 if TYPE_CHECKING:
@@ -30,20 +31,62 @@ VOCABULARY_PROMPT = (
 )
 
 SENTENCE_STRUCTURE_PROMPT = (
-    "# Sentence Structure\n" +
-    "## Simple Sentence Structure: \n" +
-    "Subject-Object-Verb: [object noun]-[object suffix] [subject noun]-[subject suffix] [object pronoun]-[verb]-[verb tense]\n" +
-    "Subject Pronoun-Object-Verb: [object noun]-[object suffix] [subject pronoun] [object pronoun]-[verb]-[verb tense]\n" +
-    "Subject-Verb: [verb]-[verb tense] [subject noun]-[subject suffix]\n" +
-    "## Verb Nominalization Sentence Structure: \n" +
-    "Subject Nominalizer: [verb]-[verb nominalizer tense]-[subject suffix] [verb nominalizer]-[verb nominalizer tense]\n" +
-    "Object Nominalizer: [verb]-[verb nominalizer tense]-[object suffix] [subject noun]-[subject suffix] [object pronoun]-[verb]-[verb tense]\n" +
-    "Subject&Object Nominalizer: [verb]-[verb nominalizer tense]-[object suffix] [verb nominalizer]-[verb nominalizer tense]-[subject suffix] [subject noun]-[subject suffix] [object pronoun]-[verb]-[verb tense]\n"
-)
-
-FORTIS_LENIS_PROMPT = (
-    "# Fortis/Lenis Transformations\n" +
-    ", ".join([f"{f}->{l}" for f, l in LENIS_MAP.items()]) + "\n"
+    "# Grammar\n"
+    "\n"
+    "## Sentence Types\n"
+    "\n"
+    "### Subject-Verb (SV) — intransitive or transitive verb without an object\n"
+    "Word order: SUBJECT VERB\n"
+    "  [subject] [verb stem]-[tense suffix]\n"
+    "The subject is either a subject pronoun or a noun with a subject suffix.\n"
+    "\n"
+    "### Subject-Object-Verb (SOV) — transitive verb with a noun object\n"
+    "Word order: SUBJECT OBJECT VERB\n"
+    "  [subject] [object noun]-[object suffix] [object pronoun prefix]-[lenis verb stem]-[tense suffix]\n"
+    "The object noun appears between subject and verb. The verb is prefixed with a 3rd-person\n"
+    "object pronoun matching the object noun's proximity and number, and the verb stem\n"
+    "undergoes initial consonant lenition (see below).\n"
+    "\n"
+    "### Pronoun-Object Transitive — transitive verb with a pronoun object (no object noun)\n"
+    "Word order: VERB SUBJECT\n"
+    "  [object pronoun prefix]-[lenis verb stem]-[tense suffix] [subject]\n"
+    "When the object is a pronoun (not a full noun), the verb comes first.\n"
+    "The verb is prefixed with the object pronoun and undergoes lenition.\n"
+    "\n"
+    "## Subject Forms\n"
+    "A subject is either a pronoun or a noun with a proximity suffix:\n"
+    "- Pronoun subject: use the subject pronoun directly\n"
+    "- Noun subject: [noun]-[subject suffix]\n"
+    "  - Proximal (this/these): -ii\n"
+    "  - Distal (that/those): -uu\n"
+    "\n"
+    "## Object Noun Suffixes\n"
+    "Object nouns take a suffix based on proximity. The suffix form depends on\n"
+    "whether the noun stem ends in a glottal stop ('):\n"
+    "- Proximal — glottal-final: -eika, otherwise: -neika\n"
+    "- Distal — glottal-final: -uka, otherwise: -noka\n"
+    "\n"
+    "## Tense/Aspect Verb Suffixes\n"
+    "- Past simple: -ku\n"
+    "- Past continuous: -ti\n"
+    "- Present continuous: -ti\n"
+    "- Present perfect: -pü\n"
+    "- Present simple: -dü\n"
+    "- Future simple: -wei\n"
+    "\n"
+    "## Subject Pronouns\n"
+    + "\n".join(f"- {p.value}: {form}" for p, form in SUBJECT_PRONOUNS.items())
+    + "\n\n"
+    "## Object Pronoun Prefixes\n"
+    "In transitive sentences, the verb is prefixed with an object pronoun.\n"
+    "When the object is a full noun, use the 3rd-person pronoun matching its proximity/number.\n"
+    + "\n".join(f"- {p.value}: {form}-" for p, form in OBJECT_PRONOUNS.items())
+    + "\n\n"
+    "## Initial Consonant Lenition (Fortis → Lenis)\n"
+    "When a verb takes an object pronoun prefix, its initial consonant changes:\n"
+    + ", ".join(f"{f} → {l}" for f, l in LENIS_MAP.items())
+    + "\n"
+    "If the verb does not start with one of these consonants, it is unchanged.\n"
 )
 
 def get_prompt(include_vocab: bool,
@@ -56,7 +99,6 @@ def get_prompt(include_vocab: bool,
     if include_vocab:
         system_prompt += VOCABULARY_PROMPT
     system_prompt += SENTENCE_STRUCTURE_PROMPT
-    system_prompt += FORTIS_LENIS_PROMPT
     for sentence_cls in include_examples:
         for source, example_sentence in sentence_cls.get_examples():
             system_prompt += (
