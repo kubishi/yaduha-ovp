@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Owens Valley Paiute language package for the Yaduha framework"
 requires-python = ">=3.10"
 dependencies = [
-    "yaduha>=0.3",
+    "yaduha>=0.3.4",
 ]
 
 [project.entry-points."yaduha.languages"]
@@ -17,4 +17,10 @@ ovp = "yaduha_ovp:language"
 [dependency-groups]
 dev = [
     "pytest>=7.0",
+    "openai",
+    "python-dotenv",
+    "requests",
 ]
+
+[tool.uv.sources]
+yaduha = { path = "../yaduha", editable = true }
