@@ -40,7 +40,7 @@ from yaduha.tool.sentence_to_english import SentenceToEnglishTool
 from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_append, jsonl_iter, make_openai, mask_oov  # noqa: E402
+from _common import OUT, jsonl_append, jsonl_iter, make_openai  # noqa: E402
 
 load_dotenv()
 
@@ -91,7 +91,7 @@ def render_masked_clauses(
         for i, d in enumerate(rec["structured"]):
             try:
                 parsed = _parse_one(d)
-                masked, oov = mask_oov(parsed)
+                masked, oov = parsed.masked_copy()
                 if not oov:
                     continue
                 r = s2e(masked)

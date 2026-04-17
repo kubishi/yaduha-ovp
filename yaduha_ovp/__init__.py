@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 from enum import Enum
 from random import choice, randint
 
@@ -33,6 +33,14 @@ def get_verb_target(lemma: str, mask: bool = False) -> str:
     if lemma in INTRANSITIVE_VERB_LOOKUP:
         return INTRANSITIVE_VERB_LOOKUP[lemma].target
     return "[VERB]" if mask else f"[{lemma}]"
+
+
+def _noun_in_vocab(lemma: str) -> bool:
+    return lemma in NOUN_LOOKUP
+
+
+def _verb_in_vocab(lemma: str) -> bool:
+    return lemma in TRANSITIVE_VERB_LOOKUP or lemma in INTRANSITIVE_VERB_LOOKUP
 
 LENIS_MAP = {
     'p': 'b',
@@ -271,6 +279,31 @@ class NominalObject(NominalBase):
         else:
             return f"{nom[:-1]}oka"      # dü → doka, weidü → weidoka
 
+def _mask_subject_field(subject: Any, oov: List[str]) -> None:
+    """Mutate a subject slot in-place, replacing OOV heads/lemmas with sentinels."""
+    if isinstance(subject, SubjectNoun) and not _noun_in_vocab(subject.head):
+        oov.append(subject.head)
+        subject.head = "[NOUN]"
+    elif isinstance(subject, NominalSubject) and not _verb_in_vocab(subject.verb_lemma):
+        oov.append(subject.verb_lemma)
+        subject.verb_lemma = "[VERB]"
+
+
+def _mask_object_field(obj: Any, oov: List[str]) -> None:
+    if isinstance(obj, ObjectNoun) and not _noun_in_vocab(obj.head):
+        oov.append(obj.head)
+        obj.head = "[NOUN]"
+    elif isinstance(obj, NominalObject) and not _verb_in_vocab(obj.verb_lemma):
+        oov.append(obj.verb_lemma)
+        obj.verb_lemma = "[VERB]"
+
+
+def _mask_verb_field(verb: Any, oov: List[str]) -> None:
+    if not _verb_in_vocab(verb.lemma):
+        oov.append(verb.lemma)
+        verb.lemma = "[VERB]"
+
+
 class SubjectVerbSentence(Sentence["SubjectVerbSentence"]):
     subject: Union[SubjectNoun, NominalSubject, Pronoun]
     verb: Union[TransitiveVerb, IntransitiveVerb]
@@ -300,6 +333,13 @@ class SubjectVerbSentence(Sentence["SubjectVerbSentence"]):
 
     def str_masked(self) -> str:
         return self._render(mask=True)
+
+    def masked_copy(self) -> Tuple["SubjectVerbSentence", List[str]]:
+        clone = self.model_copy(deep=True)
+        oov: List[str] = []
+        _mask_subject_field(clone.subject, oov)
+        _mask_verb_field(clone.verb, oov)
+        return clone, oov
 
     @classmethod
     def sample_iter(cls, n: int) -> Generator['SubjectVerbSentence', None, None]:
@@ -460,6 +500,14 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
 
     def str_masked(self) -> str:
         return self._render(mask=True)
+
+    def masked_copy(self) -> Tuple["SubjectVerbObjectSentence", List[str]]:
+        clone = self.model_copy(deep=True)
+        oov: List[str] = []
+        _mask_subject_field(clone.subject, oov)
+        _mask_verb_field(clone.verb, oov)
+        _mask_object_field(clone.object, oov)
+        return clone, oov
 
     @classmethod
     def sample_iter(cls, n: int) -> Generator['SubjectVerbObjectSentence', None, None]:

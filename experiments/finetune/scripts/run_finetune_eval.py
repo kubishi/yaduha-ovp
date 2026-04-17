@@ -38,42 +38,10 @@ DATAGEN = HERE.parent.parent / "datagen"
 DATA = HERE.parent.parent / "data" / "evaluation_sentences.csv"
 RESULTS = HERE.parent.parent / "results"
 
-sys.path.insert(0, str(DATAGEN / "datagen"))
-# Reuse the experiments' mask_oov to stay consistent with the eval pipeline.
-# (Importing from experiments/ directly would require path hacks; just copy.)
-from yaduha_ovp import (  # noqa: E402
-    INTRANSITIVE_VERB_LOOKUP,
-    NOUN_LOOKUP,
-    TRANSITIVE_VERB_LOOKUP,
-)
-
-
 FORWARD_SYSTEM = get_prompt(
     include_vocab=True,
     include_examples=(SubjectVerbSentence, SubjectVerbObjectSentence),
 )
-
-
-def mask_oov(sentence: Any) -> tuple[Any, list[str]]:
-    """Match experiments/run_translations.py::mask_oov exactly."""
-    clone = sentence.model_copy(deep=True)
-    oov: list[str] = []
-    for field in ("subject", "object"):
-        part = getattr(clone, field, None)
-        if part is not None and hasattr(part, "head"):
-            if part.head not in NOUN_LOOKUP:
-                oov.append(part.head)
-                part.head = "[NOUN]"
-    verb = getattr(clone, "verb", None)
-    if verb is not None and hasattr(verb, "lemma"):
-        in_vocab = (
-            verb.lemma in TRANSITIVE_VERB_LOOKUP
-            or verb.lemma in INTRANSITIVE_VERB_LOOKUP
-        )
-        if not in_vocab:
-            oov.append(verb.lemma)
-            verb.lemma = "[VERB]"
-    return clone, oov
 
 
 def clean(s: str) -> str:
@@ -177,7 +145,7 @@ def decode_one(
     t0 = time.time()
     if has_placeholders:
         for s in structured:
-            masked, oov = mask_oov(s)
+            masked, oov = s.masked_copy()
             oov_tokens.extend(oov)
             r = s2e(masked)
             cmp_parts.append(clean(r.content))

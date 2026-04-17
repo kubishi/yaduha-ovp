@@ -34,11 +34,6 @@ from yaduha.agent.openai import OpenAIAgent
 from yaduha.loader import LanguageLoader
 from yaduha.tool.english_to_sentences import EnglishToSentencesTool
 from yaduha.tool.sentence_to_english import SentenceToEnglishTool
-from yaduha_ovp import (
-    INTRANSITIVE_VERB_LOOKUP,
-    NOUN_LOOKUP,
-    TRANSITIVE_VERB_LOOKUP,
-)
 
 load_dotenv()
 
@@ -74,31 +69,6 @@ def clean(s: str) -> str:
     if s:
         s = s[0].upper() + s[1:]
     return s
-
-
-def mask_oov(sentence: Any) -> tuple[Any, list[str]]:
-    """Return (masked_copy, list_of_oov_tokens). Replaces OOV noun heads and
-    verb lemmas with role-tagged sentinels so that when the strong LLM reads
-    the structured JSON it can't cheat by echoing the original English word.
-    """
-    clone = sentence.model_copy(deep=True)
-    oov: list[str] = []
-
-    for field in ("subject", "object"):
-        part = getattr(clone, field, None)
-        if part is not None and hasattr(part, "head"):
-            if part.head not in NOUN_LOOKUP:
-                oov.append(part.head)
-                part.head = "[NOUN]"
-
-    verb = getattr(clone, "verb", None)
-    if verb is not None and hasattr(verb, "lemma"):
-        in_vocab = verb.lemma in TRANSITIVE_VERB_LOOKUP or verb.lemma in INTRANSITIVE_VERB_LOOKUP
-        if not in_vocab:
-            oov.append(verb.lemma)
-            verb.lemma = "[VERB]"
-
-    return clone, oov
 
 
 def translate_one(forward: Agent, strong: Agent, row: dict[str, str]) -> dict[str, Any]:
@@ -142,7 +112,7 @@ def translate_one(forward: Agent, strong: Agent, row: dict[str, str]) -> dict[st
         t_cmp0 = time.time()
         if has_placeholders:
             for s in structured:
-                masked, oov = mask_oov(s)
+                masked, oov = s.masked_copy()
                 oov_tokens.extend(oov)
                 r = s2e(masked)
                 cmp_parts.append(clean(r.content))

@@ -22,10 +22,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import random
+
+import numpy as np
 import torch
 from datasets import Dataset
 from peft import LoraConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from trl import SFTConfig, SFTTrainer
 
 HERE = Path(__file__).resolve().parent
@@ -74,6 +77,9 @@ def main() -> int:
     p.add_argument("--lora-alpha", type=int, default=32)
     p.add_argument("--lora-dropout", type=float, default=0.05)
     p.add_argument("--warmup-ratio", type=float, default=0.1)
+    p.add_argument("--seed", type=int, default=42,
+                   help="RNG seed for torch / transformers / numpy / python random "
+                        "(also propagated into SFTConfig.seed + data_seed).")
     p.add_argument("--logging-steps", type=int, default=10)
     p.add_argument("--eval-steps", type=int, default=100)
     p.add_argument("--no-eval", action="store_true",
@@ -110,6 +116,17 @@ def main() -> int:
     print(f"max_seq_length = {args.max_seq_length}", file=sys.stderr)
     print(f"lora           = r={args.lora_r} alpha={args.lora_alpha} "
           f"dropout={args.lora_dropout}", file=sys.stderr)
+    print(f"seed           = {args.seed}", file=sys.stderr)
+
+    # Seed all sources of randomness for reproducibility (data shuffle, dropout,
+    # weight init of LoRA, etc.). set_seed covers torch/numpy/python random +
+    # transformers internals.
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+    set_seed(args.seed)
 
     ds_train = to_dataset(train_path)
     ds_val = None if args.no_eval else (to_dataset(val_path) if val_path.exists() else None)
@@ -170,6 +187,8 @@ def main() -> int:
         completion_only_loss=True,  # mask system/user tokens from loss
         dataset_text_field="messages",  # signal chat format to SFTTrainer
         packing=False,
+        seed=args.seed,
+        data_seed=args.seed,
     )
 
     trainer = SFTTrainer(
