@@ -12,27 +12,27 @@ TRANSITIVE_VERB_LOOKUP: Dict[str, VocabEntry] = {entry.english: entry for entry 
 INTRANSITIVE_VERB_LOOKUP: Dict[str, VocabEntry] = {entry.english: entry for entry in INTRANSITIVE_VERBS}
 
 
-def get_noun_target(lemma: str) -> str:
+def get_noun_target(lemma: str, mask: bool = False) -> str:
     if lemma in NOUN_LOOKUP:
         return NOUN_LOOKUP[lemma].target
-    return f"[{lemma}]"
+    return "[NOUN]" if mask else f"[{lemma}]"
 
-def get_transitive_verb_target(lemma: str) -> str:
+def get_transitive_verb_target(lemma: str, mask: bool = False) -> str:
     if lemma in TRANSITIVE_VERB_LOOKUP:
         return TRANSITIVE_VERB_LOOKUP[lemma].target
-    return f"[{lemma}]"
+    return "[VERB]" if mask else f"[{lemma}]"
 
-def get_intransitive_verb_target(lemma: str) -> str:
+def get_intransitive_verb_target(lemma: str, mask: bool = False) -> str:
     if lemma in INTRANSITIVE_VERB_LOOKUP:
         return INTRANSITIVE_VERB_LOOKUP[lemma].target
-    return f"[{lemma}]"
+    return "[VERB]" if mask else f"[{lemma}]"
 
-def get_verb_target(lemma: str) -> str:
+def get_verb_target(lemma: str, mask: bool = False) -> str:
     if lemma in TRANSITIVE_VERB_LOOKUP:
         return TRANSITIVE_VERB_LOOKUP[lemma].target
     if lemma in INTRANSITIVE_VERB_LOOKUP:
         return INTRANSITIVE_VERB_LOOKUP[lemma].target
-    return f"[{lemma}]"
+    return "[VERB]" if mask else f"[{lemma}]"
 
 LENIS_MAP = {
     'p': 'b',
@@ -97,6 +97,15 @@ class TenseAspect(str, Enum):
             return "wei"
 
         raise ValueError("Invalid tense/aspect combination")
+
+
+class NominalizerTense(str, Enum):
+    """Tense for agentive verb nominalization ('the one who ___')."""
+    present = "present"   # -dü   ('the one who runs')
+    future = "future"     # -weidü ('the one who will run')
+
+    def get_suffix(self) -> str:
+        return "dü" if self == NominalizerTense.present else "weidü"
 
 # ============================================================================
 # PYDANTIC MODELS
@@ -200,24 +209,97 @@ class ObjectNoun(Noun):
         pronoun = _third_person_object_pronoun(self.proximity, self.plurality)
         return OBJECT_PRONOUNS[pronoun]
 
+
+# ============================================================================
+# AGENTIVE VERB NOMINALIZATION
+#   Any verb can function as a noun using the nominalizer suffix:
+#     poyoha-dü-ii     "the one who runs"   (proximal subject)
+#     poyoha-dü-uu     "the one who runs"   (distal subject)
+#     poyoha-weidü-ii  "the one who will run" (proximal subject)
+#     poyoha-dü-oka → poyoha-doka  (distal object; morphophonemic ü-drop)
+#     poyoha-dü-neika → poyoha-deika (proximal object)
+# ============================================================================
+
+class NominalBase(BaseModel):
+    """A noun formed by nominalizing a verb ('the one who ___')."""
+    verb_lemma: str = Field(
+        ...,
+        json_schema_extra={
+            'description': (
+                'A verb lemma from the OVP vocabulary, used here as an '
+                'agentive noun ("the one who ___"). '
+                f'Known transitive verbs: {", ".join(entry.english for entry in TRANSITIVE_VERBS)}. '
+                f'Known intransitive verbs: {", ".join(entry.english for entry in INTRANSITIVE_VERBS)}. '
+                'If the exact verb is not in this list, use the English lemma as a placeholder.'
+            )
+        }
+    )
+    nominalizer_tense: NominalizerTense = Field(
+        ...,
+        json_schema_extra={
+            'description': (
+                'Tense of the nominalizer. "present" renders as -dü ("the one who runs"); '
+                '"future" renders as -weidü ("the one who will run").'
+            )
+        },
+    )
+    proximity: Proximity
+    plurality: Plurality
+    possessive_determiner: Optional[Pronoun] = None
+
+
+class NominalSubject(NominalBase):
+    """Agentive-nominalized subject (e.g. 'the runner'/'the one who runs')."""
+    pass
+
+
+class NominalObject(NominalBase):
+    """Agentive-nominalized object (e.g. 'the runner' as direct object)."""
+    def get_matching_pronoun_prefix(self) -> str:
+        pronoun = _third_person_object_pronoun(self.proximity, self.plurality)
+        return OBJECT_PRONOUNS[pronoun]
+
+    def get_object_suffix(self, does_end_in_glottal: bool) -> str:
+        """Object suffix fused with the nominalizer: -dü + -neika/-noka → -deika/-doka.
+
+        The vowel in the nominalizer drops before the vowel-initial object suffix,
+        so we drop the last character of the nominalizer and append eika/oka.
+        """
+        nom = self.nominalizer_tense.get_suffix()  # "dü" or "weidü"
+        if self.proximity == Proximity.proximal:
+            return f"{nom[:-1]}eika"    # dü → deika, weidü → weideika
+        else:
+            return f"{nom[:-1]}oka"      # dü → doka, weidü → weidoka
+
 class SubjectVerbSentence(Sentence["SubjectVerbSentence"]):
-    subject: Union[SubjectNoun, Pronoun]
+    subject: Union[SubjectNoun, NominalSubject, Pronoun]
     verb: Union[TransitiveVerb, IntransitiveVerb]
 
-    def __str__(self) -> str:
+    def _render(self, mask: bool) -> str:
         subject_str = None
         if isinstance(self.subject, Pronoun):
             subject_str = SUBJECT_PRONOUNS[self.subject]
+        elif isinstance(self.subject, NominalSubject):
+            verb_stem = get_verb_target(self.subject.verb_lemma, mask=mask)
+            nom_suffix = self.subject.nominalizer_tense.get_suffix()
+            subject_suffix = self.subject.proximity.get_subject_suffix()
+            subject_str = f"{verb_stem}-{nom_suffix}-{subject_suffix}"
         elif isinstance(self.subject, SubjectNoun):
-            target_word = get_noun_target(self.subject.head)
+            target_word = get_noun_target(self.subject.head, mask=mask)
             subject_suffix = self.subject.proximity.get_subject_suffix()
             subject_str = f"{target_word}-{subject_suffix}"
 
-        verb_stem = get_verb_target(self.verb.lemma)
+        verb_stem = get_verb_target(self.verb.lemma, mask=mask)
         verb_suffix = self.verb.tense_aspect.get_suffix()
         verb_str = f"{verb_stem}-{verb_suffix}"
 
         return f"{subject_str} {verb_str}"
+
+    def __str__(self) -> str:
+        return self._render(mask=False)
+
+    def str_masked(self) -> str:
+        return self._render(mask=True)
 
     @classmethod
     def sample_iter(cls, n: int) -> Generator['SubjectVerbSentence', None, None]:
@@ -287,31 +369,70 @@ class SubjectVerbSentence(Sentence["SubjectVerbSentence"]):
                         tense_aspect=TenseAspect.future_simple
                     )
                 )
-            )
+            ),
+            (
+                "The runner is singing.",
+                SubjectVerbSentence(
+                    subject=NominalSubject(
+                        verb_lemma="run",
+                        nominalizer_tense=NominalizerTense.present,
+                        proximity=Proximity.distal,
+                        plurality=Plurality.singular,
+                    ),
+                    verb=IntransitiveVerb(
+                        lemma="sing",
+                        tense_aspect=TenseAspect.present_continuous,
+                    ),
+                ),
+            ),
+            (
+                "The one who will cook is laughing.",
+                SubjectVerbSentence(
+                    subject=NominalSubject(
+                        verb_lemma="cook",
+                        nominalizer_tense=NominalizerTense.future,
+                        proximity=Proximity.proximal,
+                        plurality=Plurality.singular,
+                    ),
+                    verb=IntransitiveVerb(
+                        lemma="laugh",
+                        tense_aspect=TenseAspect.present_continuous,
+                    ),
+                ),
+            ),
         ]
 
         return examples
 
 class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
-    subject: Union[SubjectNoun, Pronoun]
+    subject: Union[SubjectNoun, NominalSubject, Pronoun]
     verb: TransitiveVerb
-    object: Union[ObjectNoun, Pronoun]
+    object: Union[ObjectNoun, NominalObject, Pronoun]
 
-    def __str__(self) -> str:
+    def _render(self, mask: bool) -> str:
         object_pronoun_prefix = None
         if isinstance(self.object, Pronoun):
             object_pronoun_prefix = OBJECT_PRONOUNS[self.object]
-        elif isinstance(self.object, ObjectNoun):
+        elif isinstance(self.object, (ObjectNoun, NominalObject)):
             object_pronoun_prefix = self.object.get_matching_pronoun_prefix()
 
-        verb_stem = get_transitive_verb_target(self.verb.lemma) if self.object is not None else get_intransitive_verb_target(self.verb.lemma)
+        if self.object is not None:
+            verb_stem = get_transitive_verb_target(self.verb.lemma, mask=mask)
+        else:
+            verb_stem = get_intransitive_verb_target(self.verb.lemma, mask=mask)
         verb_suffix = self.verb.tense_aspect.get_suffix()
         verb_stem = to_lenis(verb_stem)
         verb_str = f"{object_pronoun_prefix}-{verb_stem}-{verb_suffix}"
 
         object_str = None
-        if isinstance(self.object, ObjectNoun):
-            target_word = get_noun_target(self.object.head)
+        if isinstance(self.object, NominalObject):
+            obj_verb_stem = get_verb_target(self.object.verb_lemma, mask=mask)
+            # morphophonemic fusion: nominalizer + object suffix (dü+oka → doka)
+            does_end_in_glottal = obj_verb_stem.endswith("'")
+            object_suffix = self.object.get_object_suffix(does_end_in_glottal)
+            object_str = f"{obj_verb_stem}-{object_suffix}"
+        elif isinstance(self.object, ObjectNoun):
+            target_word = get_noun_target(self.object.head, mask=mask)
             does_end_in_glottal = target_word.endswith("'")
             object_suffix = self.object.proximity.get_object_suffix(does_end_in_glottal)
             object_str = f"{target_word}-{object_suffix}"
@@ -319,8 +440,13 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
         subject_str = None
         if isinstance(self.subject, Pronoun):
             subject_str = SUBJECT_PRONOUNS[self.subject]
+        elif isinstance(self.subject, NominalSubject):
+            subj_verb_stem = get_verb_target(self.subject.verb_lemma, mask=mask)
+            nom_suffix = self.subject.nominalizer_tense.get_suffix()
+            subject_suffix = self.subject.proximity.get_subject_suffix()
+            subject_str = f"{subj_verb_stem}-{nom_suffix}-{subject_suffix}"
         elif isinstance(self.subject, SubjectNoun):
-            target_word = get_noun_target(self.subject.head)
+            target_word = get_noun_target(self.subject.head, mask=mask)
             subject_suffix = self.subject.proximity.get_subject_suffix()
             subject_str = f"{target_word}-{subject_suffix}"
 
@@ -328,6 +454,12 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
             return f"{verb_str} {subject_str}"
         else:
             return f"{subject_str} {object_str} {verb_str}"
+
+    def __str__(self) -> str:
+        return self._render(mask=False)
+
+    def str_masked(self) -> str:
+        return self._render(mask=True)
 
     @classmethod
     def sample_iter(cls, n: int) -> Generator['SubjectVerbObjectSentence', None, None]:
@@ -418,7 +550,44 @@ class SubjectVerbObjectSentence(Sentence["SubjectVerbObjectSentence"]):
                         plurality=Plurality.singular
                     )
                 )
-            )
+            ),
+            (
+                "I see the runner.",
+                SubjectVerbObjectSentence(
+                    subject=Pronoun.I,
+                    verb=TransitiveVerb(
+                        lemma="see",
+                        tense_aspect=TenseAspect.present_simple,
+                    ),
+                    object=NominalObject(
+                        verb_lemma="run",
+                        nominalizer_tense=NominalizerTense.present,
+                        proximity=Proximity.distal,
+                        plurality=Plurality.singular,
+                    ),
+                ),
+            ),
+            (
+                "The one who cooks sees the one who will eat.",
+                SubjectVerbObjectSentence(
+                    subject=NominalSubject(
+                        verb_lemma="cook",
+                        nominalizer_tense=NominalizerTense.present,
+                        proximity=Proximity.distal,
+                        plurality=Plurality.singular,
+                    ),
+                    verb=TransitiveVerb(
+                        lemma="see",
+                        tense_aspect=TenseAspect.present_simple,
+                    ),
+                    object=NominalObject(
+                        verb_lemma="eat",
+                        nominalizer_tense=NominalizerTense.future,
+                        proximity=Proximity.distal,
+                        plurality=Plurality.singular,
+                    ),
+                ),
+            ),
         ]
 
         return examples

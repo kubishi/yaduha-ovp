@@ -21,6 +21,14 @@ dev = [
     "python-dotenv",
     "requests",
 ]
+experiments = [
+    "sacrebleu>=2.0",
+    "unbabel-comet>=2.0",
+    "pandas",
+    "tqdm",
+    "matplotlib",
+    "seaborn",
+]
 
 [tool.uv.sources]
 yaduha = { path = "../yaduha", editable = true }

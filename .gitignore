@@ -30,3 +30,6 @@ Thumbs.db
 node_modules/
 .dev.vars
 .wrangler/
+
+# Logs
+*.log
