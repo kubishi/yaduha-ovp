@@ -29,6 +29,12 @@ experiments = [
     "matplotlib",
     "seaborn",
 ]
+training = [
+    "accelerate>=1.13.0",
+    "datasets>=4.8.4",
+    "peft>=0.19.1",
+    "trl>=1.2.0",
+]
 
 [tool.uv.sources]
 yaduha = { path = "../yaduha", editable = true }

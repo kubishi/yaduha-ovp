@@ -33,3 +33,10 @@ node_modules/
 
 # Logs
 *.log
+
+# Fine-tuning artifacts (large binary weights & training state; regenerable)
+experiments/finetune/adapters/
+experiments/finetune/checkpoints/
+
+# Generated training data (regenerable via experiments/run_datagen.sh)
+experiments/datagen/out/
