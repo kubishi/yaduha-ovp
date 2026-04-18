@@ -222,15 +222,16 @@ def main() -> int:
     if not todo:
         return 0
 
-    if args.forward_model.startswith("gpt-"):
-        forward: Agent = OpenAIAgent(
-            model=args.forward_model, api_key=os.environ["OPENAI_API_KEY"], temperature=0.0,
-        )
-    else:
-        forward = OllamaAgent(model=args.forward_model, base_url=args.ollama_url, temperature=0.0)
-    strong = OpenAIAgent(
-        model=args.strong_model, api_key=os.environ["OPENAI_API_KEY"], temperature=0.0,
-    )
+    def _make_agent(model: str) -> Agent:
+        """OpenAI for 'gpt-*' tags; otherwise Ollama."""
+        if model.startswith("gpt-"):
+            return OpenAIAgent(
+                model=model, api_key=os.environ["OPENAI_API_KEY"], temperature=0.0,
+            )
+        return OllamaAgent(model=model, base_url=args.ollama_url, temperature=0.0)
+
+    forward: Agent = _make_agent(args.forward_model)
+    strong: Agent = _make_agent(args.strong_model)
 
     t_start = time.time()
     completed = 0

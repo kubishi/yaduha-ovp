@@ -1,0 +1,13 @@
+# Modelfile for the fine-tuned Qwen2.5-3B forward translator.
+#
+# Register with:
+#   ollama create ft-qwen2.5-3b -f experiments/finetune/Modelfile.ft-qwen2.5-3b
+#
+# No SYSTEM or TEMPLATE set here — the EnglishToSentencesTool passes the
+# get_prompt() system message at call time, matching the training distribution.
+# Ollama picks up the chat template from the HF chat_template.jinja in the
+# merged model dir.
+
+FROM /home/jcolem27@lmumain.edu/yaduha-project/yaduha-ovp/experiments/finetune/merged/ft-qwen2.5-3b
+
+PARAMETER temperature 0

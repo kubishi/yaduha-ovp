@@ -80,6 +80,9 @@ def main() -> int:
     p.add_argument("--seed", type=int, default=42,
                    help="RNG seed for torch / transformers / numpy / python random "
                         "(also propagated into SFTConfig.seed + data_seed).")
+    p.add_argument("--data-dir", default=None,
+                   help="Directory containing {direction}_{train,val}.jsonl. "
+                        "Defaults to experiments/datagen/out/.")
     p.add_argument("--logging-steps", type=int, default=10)
     p.add_argument("--eval-steps", type=int, default=100)
     p.add_argument("--no-eval", action="store_true",
@@ -91,8 +94,9 @@ def main() -> int:
                    help="Cap training examples (smoke-test)")
     args = p.parse_args()
 
-    train_path = DATAGEN_OUT / f"{args.direction}_train.jsonl"
-    val_path = DATAGEN_OUT / f"{args.direction}_val.jsonl"
+    data_dir = Path(args.data_dir) if args.data_dir else DATAGEN_OUT
+    train_path = data_dir / f"{args.direction}_train.jsonl"
+    val_path = data_dir / f"{args.direction}_val.jsonl"
     if not train_path.exists():
         print(f"missing {train_path}", file=sys.stderr)
         return 2

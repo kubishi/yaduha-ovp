@@ -178,7 +178,9 @@ def main() -> int:
     load_dotenv()
     p = argparse.ArgumentParser()
     p.add_argument("--base-model", default="Qwen/Qwen2.5-3B-Instruct")
-    p.add_argument("--adapter", required=True)
+    p.add_argument("--adapter", default=None,
+                   help="Path to LoRA adapter. If omitted, runs the base model — "
+                        "useful for apples-to-apples HF baseline comparison.")
     p.add_argument("--strong-model", default="gpt-4o-mini")
     p.add_argument("--tag", required=True,
                    help="Output filename stem, e.g. 'ft-qwen2.5_3b__gpt-4o-mini'")
@@ -206,8 +208,11 @@ def main() -> int:
     model = AutoModelForCausalLM.from_pretrained(
         args.base_model, dtype=torch.bfloat16, device_map="auto"
     )
-    print(f"loading LoRA adapter {args.adapter}...", file=sys.stderr)
-    model = PeftModel.from_pretrained(model, args.adapter)
+    if args.adapter:
+        print(f"loading LoRA adapter {args.adapter}...", file=sys.stderr)
+        model = PeftModel.from_pretrained(model, args.adapter)
+    else:
+        print("running base model (no adapter)", file=sys.stderr)
     model.eval()
 
     language = LanguageLoader.load_language("ovp")
