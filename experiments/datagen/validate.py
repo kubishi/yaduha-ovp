@@ -18,10 +18,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
+from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence  # noqa: F401
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_iter  # noqa: E402
+from _common import OUT, jsonl_iter, parse_structured  # noqa: E402
 
 # Minimum: system + user + assistant. Backward records may also include
 # in-context example pairs between system and the last user turn.
@@ -31,12 +31,6 @@ DEFAULT_TOKENIZERS = [
     ("qwen2.5-3b", "Qwen/Qwen2.5-3B-Instruct"),
     ("llama-3.2-3b", "unsloth/Llama-3.2-3B-Instruct"),
 ]
-
-
-def parse_structured(d: dict[str, Any]) -> Any:
-    if "object" in d:
-        return SubjectVerbObjectSentence.model_validate(d)
-    return SubjectVerbSentence.model_validate(d)
 
 
 def check_message_shape(rec: dict[str, Any]) -> list[str]:

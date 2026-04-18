@@ -39,6 +39,8 @@ from yaduha_ovp.prompts import get_prompt
 HERE = Path(__file__).resolve().parent
 DATA_CSV = HERE.parent.parent / "data" / "evaluation_sentences.csv"
 
+sys.path.insert(0, str(HERE.parent.parent / "datagen"))
+from _common import parse_structured  # noqa: E402
 
 FORWARD_SYSTEM = get_prompt(
     include_vocab=True,
@@ -52,12 +54,6 @@ def load_eval_sample(n: int, seed: int) -> list[tuple[str, str]]:
         rows = [(r["sentence"], r["type"]) for r in csv.DictReader(f)]
     rng.shuffle(rows)
     return rows[:n]
-
-
-def parse_structured(d: dict):
-    if "object" in d:
-        return SubjectVerbObjectSentence.model_validate(d)
-    return SubjectVerbSentence.model_validate(d)
 
 
 def main() -> int:

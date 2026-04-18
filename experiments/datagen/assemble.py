@@ -42,13 +42,9 @@ from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
 from yaduha_ovp.prompts import get_prompt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_iter, jsonl_write, normalize_english  # noqa: E402
-
-
-def parse_structured(d: dict[str, Any]):
-    if "object" in d:
-        return SubjectVerbObjectSentence.model_validate(d)
-    return SubjectVerbSentence.model_validate(d)
+from _common import (  # noqa: E402
+    OUT, jsonl_iter, jsonl_write, normalize_english, parse_structured,
+)
 
 FORWARD_SYSTEM = get_prompt(
     include_vocab=True,

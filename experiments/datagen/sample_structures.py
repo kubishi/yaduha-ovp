@@ -264,7 +264,8 @@ def sample_all(
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("-n", type=int, default=2000, help="Number of unique structures to sample")
-    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--seed", type=int, default=0,
+                   help="RNG seed for stratified sampling (reproducible)")
     p.add_argument("--nominalization-frac", type=float, default=0.20,
                    help="Fraction of structures that may use nominalized subject/object")
     p.add_argument("--oov-frac", type=float, default=0.20,

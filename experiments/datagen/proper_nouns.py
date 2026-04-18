@@ -304,13 +304,18 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--per-name", type=int, default=3,
                    help="Records per (name, kind). Total ≈ len(PROPER_NOUNS)*4*per_name.")
-    p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--model", default="gpt-4o-mini")
-    p.add_argument("--parallel", type=int, default=8)
-    p.add_argument("--output", default=str(OUT / "proper_nouns.jsonl"))
+    p.add_argument("--seed", type=int, default=0,
+                   help="RNG seed for structure sampling (reproducible)")
+    p.add_argument("--model", default="gpt-4o-mini",
+                   help="English-author model (gpt-* or any Ollama tag)")
+    p.add_argument("--parallel", type=int, default=8,
+                   help="Concurrent LLM calls")
+    p.add_argument("--output", default=str(OUT / "proper_nouns.jsonl"),
+                   help="JSONL output path (resumable)")
     p.add_argument("--names", default=None,
                    help="Comma-separated list of names to use; defaults to PROPER_NOUNS.")
-    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--limit", type=int, default=None,
+                   help="Cap total records (smoke-test use)")
     args = p.parse_args()
 
     names = args.names.split(",") if args.names else PROPER_NOUNS

@@ -34,7 +34,7 @@ from yaduha.tool.sentence_to_english import SentenceToEnglishTool
 from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "datagen"))
-from _common import make_agent  # noqa: E402
+from _common import make_agent, parse_structured  # noqa: E402
 
 load_dotenv()
 
@@ -42,13 +42,6 @@ HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
 
 PLACEHOLDER_RE = re.compile(r"\[(?:NOUN|VERB)\]")
-
-
-def parse_structured(json_str: str):
-    d = json.loads(json_str)
-    if "object" in d:
-        return SubjectVerbObjectSentence.model_validate(d)
-    return SubjectVerbSentence.model_validate(d)
 
 
 def placeholder_rate(input_str: str, output_str: str) -> tuple[int, int]:
@@ -94,7 +87,7 @@ def main() -> int:
     parsed: list[Any] = []
     for it in items:
         try:
-            parsed.append(parse_structured(it["structured_json"]))
+            parsed.append(parse_structured(json.loads(it["structured_json"])))
         except Exception as e:
             print(f"failed to parse id={it['id']}: {e}", file=sys.stderr)
             parsed.append(None)

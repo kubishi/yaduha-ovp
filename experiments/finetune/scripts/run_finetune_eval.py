@@ -38,25 +38,13 @@ DATAGEN = HERE.parent.parent / "datagen"
 DATA = HERE.parent.parent / "data" / "evaluation_sentences.csv"
 RESULTS = HERE.parent.parent / "results"
 
+sys.path.insert(0, str(DATAGEN))
+from _common import clean, parse_structured  # noqa: E402
+
 FORWARD_SYSTEM = get_prompt(
     include_vocab=True,
     include_examples=(SubjectVerbSentence, SubjectVerbObjectSentence),
 )
-
-
-def clean(s: str) -> str:
-    s = s.strip()
-    if s and s[-1] not in ".!?":
-        s += "."
-    if s:
-        s = s[0].upper() + s[1:]
-    return s
-
-
-def parse_structured(d: dict):
-    if "object" in d:
-        return SubjectVerbObjectSentence.model_validate(d)
-    return SubjectVerbSentence.model_validate(d)
 
 
 def load_dataset() -> list[dict[str, str]]:
@@ -69,13 +57,14 @@ def load_done(path: Path) -> set[str]:
         return set()
     done: set[str] = set()
     with path.open() as f:
-        for line in f:
+        for i, line in enumerate(f, 1):
             try:
                 rec = json.loads(line)
                 if rec.get("error") is None and rec.get("source"):
                     done.add(rec["source"])
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"warning: skipped malformed line {i} in {path.name}: "
+                      f"{type(e).__name__}: {e}", file=sys.stderr)
     return done
 
 

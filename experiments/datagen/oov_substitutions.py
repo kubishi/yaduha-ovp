@@ -291,11 +291,17 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--per-lemma", type=int, default=4,
                    help="Sentences per OOV lemma (× lemma pool size = total records)")
-    p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--model", default="gpt-4o-mini")
-    p.add_argument("--parallel", type=int, default=8)
-    p.add_argument("--output", default=str(OUT / "oov_substitutions.jsonl"))
-    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--seed", type=int, default=0,
+                   help="RNG seed for which lemmas/slots are chosen (reproducible)")
+    p.add_argument("--model", default="gpt-4o-mini",
+                   help="English-author model (gpt-* or any Ollama tag)")
+    p.add_argument("--parallel", type=int, default=8,
+                   help="Concurrent LLM calls")
+    p.add_argument("--output", default=str(OUT / "oov_substitutions.jsonl"),
+                   help="JSONL output path (resumable; records with an "
+                        "english field are skipped)")
+    p.add_argument("--limit", type=int, default=None,
+                   help="Cap total records (smoke-test use)")
     args = p.parse_args()
 
     out_path = Path(args.output)

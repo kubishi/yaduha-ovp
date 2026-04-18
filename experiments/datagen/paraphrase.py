@@ -160,16 +160,24 @@ def process_one(
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--input", default=str(OUT / "structures.jsonl"))
-    p.add_argument("--output", default=str(OUT / "paraphrases.jsonl"))
+    p.add_argument("--input", default=str(OUT / "structures.jsonl"),
+                   help="Structured-sentence JSONL from sample_structures.py")
+    p.add_argument("--output", default=str(OUT / "paraphrases.jsonl"),
+                   help="Paraphrase JSONL output (resumable)")
     p.add_argument("--strong-model", default="gpt-4o-mini",
-                   help="Model used to render canonical English from structured JSON.")
+                   help="Model used to render canonical English from structured "
+                        "JSON (gpt-* or any Ollama tag; uses temperature=0.0).")
     p.add_argument("--para-model", default="gpt-4o-mini",
-                   help="Model used to author paraphrases. Use gpt-4o for higher quality.")
-    p.add_argument("--k-min", type=int, default=4)
-    p.add_argument("--k-max", type=int, default=8)
-    p.add_argument("--parallel", type=int, default=8)
-    p.add_argument("--limit", type=int, default=None)
+                   help="Model used to author paraphrases (gpt-* or any Ollama "
+                        "tag; uses temperature=0.9 for diversity).")
+    p.add_argument("--k-min", type=int, default=4,
+                   help="Minimum paraphrases per canonical")
+    p.add_argument("--k-max", type=int, default=8,
+                   help="Maximum paraphrases per canonical")
+    p.add_argument("--parallel", type=int, default=8,
+                   help="Concurrent LLM calls")
+    p.add_argument("--limit", type=int, default=None,
+                   help="Cap total records (smoke-test use)")
     args = p.parse_args()
 
     in_path = Path(args.input)

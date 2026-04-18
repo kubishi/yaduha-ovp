@@ -34,7 +34,7 @@ from yaduha.tool.english_to_sentences import EnglishToSentencesTool
 from yaduha.tool.sentence_to_english import SentenceToEnglishTool
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "datagen"))
-from _common import make_agent  # noqa: E402
+from _common import clean, make_agent  # noqa: E402
 
 load_dotenv()
 
@@ -53,23 +53,15 @@ def load_done(path: Path) -> set[str]:
         return set()
     done: set[str] = set()
     with path.open() as f:
-        for line in f:
+        for i, line in enumerate(f, 1):
             try:
                 rec = json.loads(line)
                 if rec.get("error") is None and rec.get("source"):
                     done.add(rec["source"])
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"warning: skipped malformed line {i} in {path.name}: "
+                      f"{type(e).__name__}: {e}", file=sys.stderr)
     return done
-
-
-def clean(s: str) -> str:
-    s = s.strip()
-    if s and s[-1] not in ".!?":
-        s += "."
-    if s:
-        s = s[0].upper() + s[1:]
-    return s
 
 
 def translate_one(forward: Agent, strong: Agent, row: dict[str, str]) -> dict[str, Any]:
@@ -195,14 +187,18 @@ def main() -> int:
             kept: list[str] = []
             dropped = 0
             with out_path.open() as f:
-                for line in f:
+                for i, line in enumerate(f, 1):
                     try:
                         r = json.loads(line)
                         if r.get("type") in types_filter:
                             dropped += 1
                             continue
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        # Preserve the line as-is if it fails to parse, so we
+                        # don't silently lose data, but flag it to the user.
+                        print(f"warning: keeping unparseable line {i} "
+                              f"(will not be dropped): {type(e).__name__}: {e}",
+                              file=sys.stderr)
                     kept.append(line)
             with out_path.open("w") as f:
                 f.writelines(kept)

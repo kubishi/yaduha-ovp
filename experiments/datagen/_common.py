@@ -61,3 +61,26 @@ def jsonl_append(path: Path, record: dict[str, Any]) -> None:
 def normalize_english(s: str) -> str:
     """Cheap normalization for dedup keys."""
     return " ".join(s.lower().split()).rstrip(".!?")
+
+
+def clean(s: str) -> str:
+    """Strip, ensure terminal punctuation, and capitalize the first letter.
+    Used across the eval pipeline to normalize LLM outputs before scoring."""
+    s = s.strip()
+    if s and s[-1] not in ".!?":
+        s += "."
+    if s:
+        s = s[0].upper() + s[1:]
+    return s
+
+
+def parse_structured(d: dict[str, Any]):
+    """Parse a structured-sentence dict into the correct OVP Sentence
+    subclass. The presence of an ``object`` field distinguishes
+    SubjectVerbObjectSentence from SubjectVerbSentence."""
+    # Imported locally so this module stays importable without the OVP
+    # language package installed (useful for framework-level tooling).
+    from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
+    if "object" in d:
+        return SubjectVerbObjectSentence.model_validate(d)
+    return SubjectVerbSentence.model_validate(d)
