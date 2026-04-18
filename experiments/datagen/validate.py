@@ -23,7 +23,9 @@ from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import OUT, jsonl_iter  # noqa: E402
 
-REQUIRED_ROLES = ("system", "user", "assistant")
+# Minimum: system + user + assistant. Backward records may also include
+# in-context example pairs between system and the last user turn.
+MIN_MESSAGES = 3
 
 DEFAULT_TOKENIZERS = [
     ("qwen2.5-3b", "Qwen/Qwen2.5-3B-Instruct"),
@@ -38,20 +40,24 @@ def parse_structured(d: dict[str, Any]) -> Any:
 
 
 def check_message_shape(rec: dict[str, Any]) -> list[str]:
+    """Expect: system first, assistant last, user immediately before the final
+    assistant. Records with in-context example turns (user/assistant pairs)
+    between system and the final user are also valid."""
     errs: list[str] = []
     msgs = rec.get("messages")
-    if not isinstance(msgs, list) or len(msgs) != 3:
-        errs.append(f"messages must be a 3-element list, got {type(msgs).__name__} len={len(msgs) if hasattr(msgs, '__len__') else '?'}")
+    if not isinstance(msgs, list) or len(msgs) < MIN_MESSAGES:
+        errs.append(f"messages must be a list of >= {MIN_MESSAGES}, got len={len(msgs) if hasattr(msgs, '__len__') else '?'}")
         return errs
-    for i, role in enumerate(REQUIRED_ROLES):
-        m = msgs[i]
-        if not isinstance(m, dict):
-            errs.append(f"messages[{i}] not a dict")
-            continue
-        if m.get("role") != role:
-            errs.append(f"messages[{i}] role={m.get('role')!r} expected {role!r}")
+    if msgs[0].get("role") != "system":
+        errs.append(f"messages[0] role={msgs[0].get('role')!r} expected 'system'")
+    if msgs[-1].get("role") != "assistant":
+        errs.append(f"messages[-1] role={msgs[-1].get('role')!r} expected 'assistant'")
+    if msgs[-2].get("role") != "user":
+        errs.append(f"messages[-2] role={msgs[-2].get('role')!r} expected 'user'")
+    for i, m in enumerate(msgs):
         if not isinstance(m.get("content"), str) or not m["content"]:
             errs.append(f"messages[{i}] content empty or non-string")
+            break
     return errs
 
 
@@ -59,7 +65,7 @@ def check_forward(rec: dict[str, Any]) -> list[str]:
     errs = check_message_shape(rec)
     if errs:
         return errs
-    asst = rec["messages"][2]["content"]
+    asst = rec["messages"][-1]["content"]
     try:
         parsed = json.loads(asst)
     except json.JSONDecodeError as e:
@@ -83,7 +89,7 @@ def check_backward(rec: dict[str, Any]) -> list[str]:
         return errs
     # Backward user follows SentenceToEnglishTool: double-encoded single sentence
     # json.dumps(sentence.model_dump_json()) — parse twice to reach the dict.
-    user = rec["messages"][1]["content"]
+    user = rec["messages"][-2]["content"]
     try:
         inner = json.loads(user)
     except json.JSONDecodeError as e:
@@ -159,7 +165,7 @@ def test_chat_templates(
                     )
                     ids = tok(rendered).input_ids
                     lengths.append(len(ids))
-                    if rec["messages"][2]["content"][:20] not in rendered:
+                    if rec["messages"][-1]["content"][:20] not in rendered:
                         print(f"  [{direction}] warning: assistant content not found in rendered text", file=sys.stderr)
                         all_ok = False
                 except Exception as e:

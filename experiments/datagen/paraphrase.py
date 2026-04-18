@@ -34,7 +34,7 @@ from yaduha.tool.sentence_to_english import SentenceToEnglishTool
 from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence  # noqa: F401
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_append, jsonl_iter, make_openai  # noqa: E402
+from _common import OUT, jsonl_append, jsonl_iter, make_agent, make_openai  # noqa: E402
 
 load_dotenv()
 
@@ -142,7 +142,7 @@ def process_one(
     try:
         parsed = [_parse_structure(d) for d in record["structured"]]
 
-        strong = make_openai(strong_model, temperature=0.0)
+        strong = make_agent(strong_model, temperature=0.0)
         s2e = SentenceToEnglishTool(agent=strong, SentenceType=sentence_types)
         per_struct = [render_canonical(s2e, p) for p in parsed]
         out["per_structure_canonicals"] = per_struct
@@ -150,7 +150,7 @@ def process_one(
         canonical = " ".join(per_struct)
         out["canonical"] = canonical
 
-        para_agent = make_openai(para_model, temperature=0.9)
+        para_agent = make_agent(para_model, temperature=0.9)
         result = request_paraphrases(para_agent, canonical, record["n_sentences"], k_min, k_max)
         out["paraphrases"] = [p.model_dump() for p in result.paraphrases]
     except Exception as e:

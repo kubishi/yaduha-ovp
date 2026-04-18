@@ -29,12 +29,12 @@ from dotenv import load_dotenv
 
 import sacrebleu  # type: ignore[import-untyped]
 
-from yaduha.agent import Agent
-from yaduha.agent.ollama import OllamaAgent
-from yaduha.agent.openai import OpenAIAgent
 from yaduha.loader import LanguageLoader
 from yaduha.tool.sentence_to_english import SentenceToEnglishTool
 from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "datagen"))
+from _common import make_agent  # noqa: E402
 
 load_dotenv()
 
@@ -60,13 +60,6 @@ def placeholder_rate(input_str: str, output_str: str) -> tuple[int, int]:
     preserved = sum(min(out[k], v) for k, v in inp.items())
     expected = sum(inp.values())
     return preserved, expected
-
-
-def make_agent(model: str, ollama_url: str) -> Agent:
-    if model.startswith("gpt-"):
-        return OpenAIAgent(model=model, api_key=os.environ["OPENAI_API_KEY"],
-                           temperature=0.0)
-    return OllamaAgent(model=model, base_url=ollama_url, temperature=0.0)
 
 
 def main() -> int:
@@ -112,7 +105,7 @@ def main() -> int:
 
     for model in args.models:
         print(f"\n=== {model} ===", file=sys.stderr)
-        agent = make_agent(model, args.ollama_url)
+        agent = make_agent(model, temperature=0.0, ollama_url=args.ollama_url)
         s2e = SentenceToEnglishTool(agent=agent, SentenceType=sentence_types)
         per_model[model] = []
         t0 = time.time()

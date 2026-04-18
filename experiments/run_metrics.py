@@ -39,17 +39,6 @@ def score_chrfpp(hyp: str, ref: str) -> float:
     return sacrebleu.sentence_chrf(hyp, [ref], word_order=2).score / 100.0
 
 
-def batch_comet(pairs: list[tuple[str, str, str]], batch_size: int = 32) -> list[float]:
-    """pairs is list of (src, mt, ref). Returns per-item scores."""
-    from comet import download_model, load_from_checkpoint  # type: ignore[import-untyped]
-
-    path = download_model("Unbabel/wmt22-comet-da")
-    model = load_from_checkpoint(path)
-    data = [{"src": s, "mt": m, "ref": r} for s, m, r in pairs]
-    out = model.predict(data, batch_size=batch_size, gpus=1)
-    return list(out.scores)
-
-
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--input", required=True, help="Translations JSONL")

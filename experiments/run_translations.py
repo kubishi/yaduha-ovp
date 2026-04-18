@@ -29,11 +29,12 @@ from typing import Any
 from dotenv import load_dotenv
 
 from yaduha.agent import Agent
-from yaduha.agent.ollama import OllamaAgent
-from yaduha.agent.openai import OpenAIAgent
 from yaduha.loader import LanguageLoader
 from yaduha.tool.english_to_sentences import EnglishToSentencesTool
 from yaduha.tool.sentence_to_english import SentenceToEnglishTool
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "datagen"))
+from _common import make_agent  # noqa: E402
 
 load_dotenv()
 
@@ -222,16 +223,10 @@ def main() -> int:
     if not todo:
         return 0
 
-    def _make_agent(model: str) -> Agent:
-        """OpenAI for 'gpt-*' tags; otherwise Ollama."""
-        if model.startswith("gpt-"):
-            return OpenAIAgent(
-                model=model, api_key=os.environ["OPENAI_API_KEY"], temperature=0.0,
-            )
-        return OllamaAgent(model=model, base_url=args.ollama_url, temperature=0.0)
-
-    forward: Agent = _make_agent(args.forward_model)
-    strong: Agent = _make_agent(args.strong_model)
+    forward: Agent = make_agent(args.forward_model, temperature=0.0,
+                                ollama_url=args.ollama_url)
+    strong: Agent = make_agent(args.strong_model, temperature=0.0,
+                               ollama_url=args.ollama_url)
 
     t_start = time.time()
     completed = 0

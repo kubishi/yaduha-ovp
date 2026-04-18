@@ -2,7 +2,8 @@
 
 End-to-end reproduction of `ft-qwen2.5:3b`, the LoRA-fine-tuned Qwen2.5-3B-Instruct
 that beats gpt-4o-mini on the cheat-proof comparator metric
-(0.492 vs 0.461 COMET_c). Live status dashboard: <https://yaduha-status.pages.dev>.
+(0.492 vs 0.461 COMET_c). Live status dashboard (Cloudflare Access-gated):
+<https://yaduha.proj.kubishi.com>.
 
 ## Hardware & environment
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 from yaduha.agent import Agent
+from yaduha.agent.ollama import OllamaAgent
 from yaduha.agent.openai import OpenAIAgent
 
 HERE = Path(__file__).resolve().parent
@@ -20,6 +21,15 @@ def make_openai(model: str, temperature: float = 0.7) -> Agent:
         api_key=os.environ["OPENAI_API_KEY"],
         temperature=temperature,
     )
+
+
+def make_agent(model: str, temperature: float = 0.7,
+               ollama_url: str = "http://localhost:11434") -> Agent:
+    """OpenAI for 'gpt-*' tags, otherwise Ollama. Lets datagen stages swap
+    between closed and open models via a tag string."""
+    if model.startswith("gpt-"):
+        return make_openai(model, temperature=temperature)
+    return OllamaAgent(model=model, base_url=ollama_url, temperature=temperature)
 
 
 def jsonl_iter(path: Path) -> Iterator[dict[str, Any]]:

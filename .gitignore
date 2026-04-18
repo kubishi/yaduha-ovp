@@ -41,6 +41,7 @@ experiments/finetune/checkpoints/
 # Generated training data (regenerable via experiments/run_datagen.sh)
 experiments/datagen/out/
 experiments/datagen/out_ablations/
+experiments/datagen/out_openpara/
 
 # Merged model weights (bf16, ~6 GB each; regenerable from adapter + base)
 experiments/finetune/merged/

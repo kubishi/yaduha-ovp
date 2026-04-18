@@ -45,7 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import OUT, jsonl_iter, jsonl_write, normalize_english  # noqa: E402
 
 
-def _parse_structured(d: dict[str, Any]):
+def parse_structured(d: dict[str, Any]):
     if "object" in d:
         return SubjectVerbObjectSentence.model_validate(d)
     return SubjectVerbSentence.model_validate(d)
@@ -55,19 +55,43 @@ FORWARD_SYSTEM = get_prompt(
     include_examples=(SubjectVerbSentence, SubjectVerbObjectSentence),
 )
 
+# BACKWARD_SYSTEM must match SentenceToEnglishTool's inference system prompt
+# EXACTLY so training and serving see the same context. See
+# yaduha.tool.sentence_to_english for the source.
 BACKWARD_SYSTEM = (
-    "You translate a structured sentence (JSON) into natural English.\n"
-    "The structured schema uses English lemmas in noun.head and verb.lemma fields. "
-    "Render the meaning in fluent English, preserving any [NOUN] and [VERB] "
-    "placeholder tokens verbatim."
+    "You are a translator that transforms structured sentences into natural English. "
+    "The sentences may be strange and unusual, but you must translate them as "
+    "accurately as possible. "
 )
+
+
+def _backward_example_turns() -> list[dict[str, str]]:
+    """Replicate SentenceToEnglishTool's in-context example turns so training
+    records match the inference format exactly.
+
+    Format per example (matches sentence_to_english.py):
+        user      -> json.dumps(example_sentence.model_dump_json())
+        assistant -> english
+    """
+    turns: list[dict[str, str]] = []
+    for SentenceCls in (SubjectVerbSentence, SubjectVerbObjectSentence):
+        for english, example in SentenceCls.get_examples():
+            turns.append({
+                "role": "user",
+                "content": json.dumps(example.model_dump_json(), ensure_ascii=False),
+            })
+            turns.append({"role": "assistant", "content": english})
+    return turns
+
+
+_BACKWARD_EXAMPLES = _backward_example_turns()
 
 
 def wrap_forward(structured_list: list[dict[str, Any]]) -> str:
     """Emit the assistant target using pydantic's SentenceList serialization.
     `structured_list` is always a list (length 1+); multi-clause records emit
     a SentenceList of the same length."""
-    parsed = [_parse_structured(d) for d in structured_list]
+    parsed = [parse_structured(d) for d in structured_list]
     return SentenceList(sentences=parsed).model_dump_json()
 
 
@@ -263,13 +287,20 @@ def to_messages_forward(r: dict[str, Any]) -> dict[str, Any]:
 
 
 def to_messages_backward(r: dict[str, Any]) -> dict[str, Any]:
-    # Match SentenceToEnglishTool's inference format: single sentence (not a
-    # SentenceList wrapper) double-encoded — json.dumps(sentence.model_dump_json()).
-    parsed = _parse_structured(r["structured"])
+    # Match SentenceToEnglishTool's inference format EXACTLY:
+    #   system  -> SentenceToEnglishTool's system prompt
+    #   *       -> in-context example turns from each Sentence's get_examples()
+    #   user    -> json.dumps(sentence.model_dump_json())   (double-encoded)
+    #   assist. -> english
+    # Prior versions trained with a short custom system prompt and no
+    # in-context examples, which mismatched the serving path and caused the
+    # adapter to run past the intended turn boundary at inference.
+    parsed = parse_structured(r["structured"])
     user = json.dumps(parsed.model_dump_json(), ensure_ascii=False)
     return {
         "messages": [
             {"role": "system", "content": BACKWARD_SYSTEM},
+            *_BACKWARD_EXAMPLES,
             {"role": "user", "content": user},
             {"role": "assistant", "content": r["english"]},
         ],
