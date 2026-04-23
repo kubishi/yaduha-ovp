@@ -34,7 +34,7 @@ from yaduha.tool.sentence_to_english import SentenceToEnglishTool
 from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence  # noqa: F401
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_append, jsonl_iter, make_agent, make_openai  # noqa: E402
+from _common import OUT, jsonl_append, jsonl_iter, make_agent  # noqa: E402
 
 load_dotenv()
 

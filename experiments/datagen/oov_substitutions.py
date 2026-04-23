@@ -52,7 +52,7 @@ from yaduha_ovp import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_append, jsonl_iter, make_openai  # noqa: E402
+from _common import OUT, jsonl_append, jsonl_iter, make_agent  # noqa: E402
 from oov_lemmas import (  # noqa: E402
     NEGATIVE_INTRANS_VERBS_F,
     NEGATIVE_NOUNS_F,
@@ -280,7 +280,7 @@ def process_one(rec: dict[str, Any], model: str) -> dict[str, Any]:
     out["english"] = None
     out["errors"] = []
     try:
-        agent = make_openai(model, temperature=0.7)
+        agent = make_agent(model, temperature=0.7)
         out["english"] = _ask_english(agent, _system_for(rec["kind"]), _payload_for(rec))
     except Exception as e:
         out["errors"].append(f"{type(e).__name__}: {e}")

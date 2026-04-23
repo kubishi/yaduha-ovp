@@ -12,7 +12,10 @@ from yaduha.agent.ollama import OllamaAgent
 from yaduha.agent.openai import OpenAIAgent
 
 HERE = Path(__file__).resolve().parent
-OUT = HERE / "out"
+# Output directory for all datagen stages. Override with env var
+# DATAGEN_OUT_DIR to run parallel pipelines (e.g., one on gpt-4o-mini
+# and one on qwen2.5:7b) without them overwriting each other.
+OUT = Path(os.environ.get("DATAGEN_OUT_DIR") or (HERE / "out"))
 
 
 def make_openai(model: str, temperature: float = 0.7) -> Agent:

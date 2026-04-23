@@ -14,6 +14,8 @@
 #   COMET_THRESHOLD   — if set (e.g. 0.5), filter forward paraphrases by COMET sim
 #   VAL_FRAC          — val split fraction (default: 0.1)
 #   SEED              — RNG seed (default: 0)
+#   OUT_DIR           — override output dir (default: datagen/out). Use for
+#                       side-by-side ablations (e.g. out_fullopen).
 #
 # Each step is resumable; re-running with the same flags continues where it
 # left off. To redo a step, delete its output JSONL.
@@ -33,13 +35,18 @@ VAL_FRAC="${VAL_FRAC:-0.1}"
 SEED="${SEED:-0}"
 
 DATAGEN=yaduha-ovp/experiments/datagen
-OUT=$DATAGEN/out
+OUT_NAME="${OUT_DIR:-out}"      # subdir name under datagen/
+OUT="$DATAGEN/$OUT_NAME"
 mkdir -p "$OUT"
+# Make the output dir visible to Python stages via _common.OUT. Absolute
+# path so it doesn't care what cwd the Python process is invoked from.
+export DATAGEN_OUT_DIR="$(cd "$OUT" && pwd)"
 
 echo "=== datagen config ==="
 echo "  N_STRUCTURES=$N_STRUCTURES  PER_LEMMA=$PER_LEMMA  PER_NAME=$PER_NAME  K=[$K_MIN..$K_MAX]"
 echo "  PARA_MODEL=$PARA_MODEL  BACKWARD_MODEL=$BACKWARD_MODEL  PARALLEL=$PARALLEL"
 echo "  VAL_FRAC=$VAL_FRAC  SEED=$SEED  COMET_THRESHOLD=${COMET_THRESHOLD:-<skip>}"
+echo "  OUT=$DATAGEN_OUT_DIR"
 echo
 
 UVRUN="uv run --project yaduha-ovp python"

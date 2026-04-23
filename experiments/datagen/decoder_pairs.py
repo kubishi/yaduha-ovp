@@ -40,7 +40,7 @@ from yaduha.tool.sentence_to_english import SentenceToEnglishTool
 from yaduha_ovp import SubjectVerbObjectSentence, SubjectVerbSentence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_append, jsonl_iter, make_openai  # noqa: E402
+from _common import OUT, jsonl_append, jsonl_iter, make_agent  # noqa: E402
 
 load_dotenv()
 
@@ -86,7 +86,7 @@ def render_masked_clauses(
     if that clause has OOV tokens."""
     results: list[dict[str, Any]] = []
     try:
-        agent = make_openai(backward_model, temperature=0.0)
+        agent = make_agent(backward_model, temperature=0.0)
         s2e = SentenceToEnglishTool(agent=agent, SentenceType=sentence_types)
         for i, d in enumerate(rec["structured"]):
             try:

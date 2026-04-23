@@ -56,7 +56,7 @@ from yaduha_ovp import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import OUT, jsonl_append, jsonl_iter, make_openai  # noqa: E402
+from _common import OUT, jsonl_append, jsonl_iter, make_agent  # noqa: E402
 from oov_lemmas import PROPER_NOUNS  # noqa: E402
 
 load_dotenv()
@@ -293,7 +293,7 @@ def process_one(seed: dict[str, Any], model: str) -> dict[str, Any]:
         "errors": [],
     }
     try:
-        agent = make_openai(model, temperature=0.7)
+        agent = make_agent(model, temperature=0.7)
         out["english"] = _ask(agent, _system_for(seed["kind"]), seed["structured_obj"], seed["name"])
     except Exception as e:
         out["errors"].append(f"{type(e).__name__}: {e}")
