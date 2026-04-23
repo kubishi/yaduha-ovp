@@ -123,7 +123,7 @@ def request_paraphrases(agent, canonical: str, n_sentences: int, k_min: int, k_m
 def process_one(
     record: dict[str, Any],
     sentence_types: tuple,
-    strong_model: str,
+    backward_model: str,
     para_model: str,
     k_min: int,
     k_max: int,
@@ -142,8 +142,8 @@ def process_one(
     try:
         parsed = [_parse_structure(d) for d in record["structured"]]
 
-        strong = make_agent(strong_model, temperature=0.0)
-        s2e = SentenceToEnglishTool(agent=strong, SentenceType=sentence_types)
+        backward = make_agent(backward_model, temperature=0.0)
+        s2e = SentenceToEnglishTool(agent=backward, SentenceType=sentence_types)
         per_struct = [render_canonical(s2e, p) for p in parsed]
         out["per_structure_canonicals"] = per_struct
         # Joined canonical: simple concatenation, trusting gpt's per-clause punctuation.
@@ -164,7 +164,7 @@ def main() -> int:
                    help="Structured-sentence JSONL from sample_structures.py")
     p.add_argument("--output", default=str(OUT / "paraphrases.jsonl"),
                    help="Paraphrase JSONL output (resumable)")
-    p.add_argument("--strong-model", default="gpt-4o-mini",
+    p.add_argument("--backward-model", default="gpt-4o-mini",
                    help="Model used to render canonical English from structured "
                         "JSON (gpt-* or any Ollama tag; uses temperature=0.0).")
     p.add_argument("--para-model", default="gpt-4o-mini",
@@ -209,7 +209,7 @@ def main() -> int:
         futures = {
             ex.submit(
                 process_one, r, sentence_types,
-                args.strong_model, args.para_model, args.k_min, args.k_max,
+                args.backward_model, args.para_model, args.k_min, args.k_max,
             ): r for r in todo
         }
         for fut in as_completed(futures):

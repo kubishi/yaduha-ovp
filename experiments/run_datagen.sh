@@ -9,7 +9,7 @@
 #   PER_NAME          — proper-noun records per (name, kind) (default: 3)
 #   K_MIN, K_MAX      — paraphrase count range per canonical (default: 4..8)
 #   PARA_MODEL        — paraphrase model (default: gpt-4o-mini; gpt-4o for higher quality)
-#   STRONG_MODEL      — canonical/decoder model (default: gpt-4o-mini)
+#   BACKWARD_MODEL    — canonical/decoder model (default: gpt-4o-mini)
 #   PARALLEL          — concurrency (default: 8)
 #   COMET_THRESHOLD   — if set (e.g. 0.5), filter forward paraphrases by COMET sim
 #   VAL_FRAC          — val split fraction (default: 0.1)
@@ -27,7 +27,7 @@ PER_NAME="${PER_NAME:-3}"
 K_MIN="${K_MIN:-4}"
 K_MAX="${K_MAX:-8}"
 PARA_MODEL="${PARA_MODEL:-gpt-4o-mini}"
-STRONG_MODEL="${STRONG_MODEL:-gpt-4o-mini}"
+BACKWARD_MODEL="${BACKWARD_MODEL:-gpt-4o-mini}"
 PARALLEL="${PARALLEL:-8}"
 VAL_FRAC="${VAL_FRAC:-0.1}"
 SEED="${SEED:-0}"
@@ -38,7 +38,7 @@ mkdir -p "$OUT"
 
 echo "=== datagen config ==="
 echo "  N_STRUCTURES=$N_STRUCTURES  PER_LEMMA=$PER_LEMMA  PER_NAME=$PER_NAME  K=[$K_MIN..$K_MAX]"
-echo "  PARA_MODEL=$PARA_MODEL  STRONG_MODEL=$STRONG_MODEL  PARALLEL=$PARALLEL"
+echo "  PARA_MODEL=$PARA_MODEL  BACKWARD_MODEL=$BACKWARD_MODEL  PARALLEL=$PARALLEL"
 echo "  VAL_FRAC=$VAL_FRAC  SEED=$SEED  COMET_THRESHOLD=${COMET_THRESHOLD:-<skip>}"
 echo
 
@@ -49,7 +49,7 @@ $UVRUN $DATAGEN/sample_structures.py -n "$N_STRUCTURES" --seed "$SEED"
 
 echo "=== step 2: paraphrase ==="
 $UVRUN $DATAGEN/paraphrase.py \
-    --strong-model "$STRONG_MODEL" --para-model "$PARA_MODEL" \
+    --backward-model "$BACKWARD_MODEL" --para-model "$PARA_MODEL" \
     --k-min "$K_MIN" --k-max "$K_MAX" --parallel "$PARALLEL"
 
 echo "=== step 3: oov_substitutions ==="
@@ -62,7 +62,7 @@ $UVRUN $DATAGEN/proper_nouns.py \
 
 echo "=== step 4: decoder_pairs ==="
 $UVRUN $DATAGEN/decoder_pairs.py \
-    --strong-model "$STRONG_MODEL" --parallel "$PARALLEL"
+    --backward-model "$BACKWARD_MODEL" --parallel "$PARALLEL"
 
 echo "=== step 5: assemble ==="
 COMET_ARG=()

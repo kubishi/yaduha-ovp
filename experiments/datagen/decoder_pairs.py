@@ -80,13 +80,13 @@ def emit_clean(
 
 
 def render_masked_clauses(
-    rec: dict[str, Any], sentence_types: tuple, strong_model: str
+    rec: dict[str, Any], sentence_types: tuple, backward_model: str
 ) -> list[dict[str, Any]]:
     """For a multi-clause record, iterate each clause and emit a masked pair
     if that clause has OOV tokens."""
     results: list[dict[str, Any]] = []
     try:
-        agent = make_openai(strong_model, temperature=0.0)
+        agent = make_openai(backward_model, temperature=0.0)
         s2e = SentenceToEnglishTool(agent=agent, SentenceType=sentence_types)
         for i, d in enumerate(rec["structured"]):
             try:
@@ -138,7 +138,7 @@ def main() -> int:
     p.add_argument("--structures", default=str(OUT / "structures.jsonl"))
     p.add_argument("--paraphrases", default=str(OUT / "paraphrases.jsonl"))
     p.add_argument("--output", default=str(OUT / "decoder_pairs.jsonl"))
-    p.add_argument("--strong-model", default="gpt-4o-mini")
+    p.add_argument("--backward-model", default="gpt-4o-mini")
     p.add_argument("--parallel", type=int, default=8)
     p.add_argument("--limit-masked", type=int, default=None,
                    help="Cap masked-pair generation (LLM-bound). None = all OOV structures.")
@@ -193,7 +193,7 @@ def main() -> int:
     completed = 0
     with ThreadPoolExecutor(max_workers=args.parallel) as ex:
         futures = {
-            ex.submit(render_masked_clauses, s, sentence_types, args.strong_model): s
+            ex.submit(render_masked_clauses, s, sentence_types, args.backward_model): s
             for s in oov_records
         }
         for fut in as_completed(futures):

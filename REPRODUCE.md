@@ -14,7 +14,7 @@ that beats gpt-4o-mini on the cheat-proof comparator metric
 - **Python** 3.10+.
 - **[uv](https://docs.astral.sh/uv/)** for dependency management.
 - **OpenAI API key** in `.env` as `OPENAI_API_KEY=sk-…` (used for the
-  paraphrase/OOV/proper-noun datagen at gpt-4o-mini, and for the strong-model
+  paraphrase/OOV/proper-noun datagen at gpt-4o-mini, and for the backward-model
   decoder at eval time).
 - **Internet** to pull `Qwen/Qwen2.5-3B-Instruct` (~6 GB) from HuggingFace on
   first training run.

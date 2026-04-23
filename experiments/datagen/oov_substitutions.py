@@ -9,7 +9,7 @@ keep the English lemma so the deterministic surface emits a `[lemma]`
 placeholder. Without negatives, fine-tuned models hallucinate substitutions.
 
 For each (oov_lemma, in_vocab_hypernym|None), we deterministically build N
-random simple structural contexts, then ask the strong LLM for one natural
+random simple structural contexts, then ask the backward LLM for one natural
 English sentence per context that uses the OOV word in a way consistent with
 the structure.
 

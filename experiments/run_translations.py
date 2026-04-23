@@ -4,14 +4,14 @@ Pipeline per input sentence:
     input                  ---[WEAK model]---> structured OVP-Sentence(s)
     structured             ---[deterministic]-> target         (OVP surface; may contain [lemma] for OOV)
     structured             ---[str_masked]---> target_masked   (OOV lemmas → [NOUN]/[VERB])
-    structured             ---[STRONG model]-> backwards       (strong LLM reads JSON → English)
-    mask_oov(structured)   ---[STRONG model]-> comparator      (strong LLM reads JSON with OOV head/lemma masked)
+    structured             ---[BACKWARD model]-> backwards       (backward LLM reads JSON → English)
+    mask_oov(structured)   ---[BACKWARD model]-> comparator      (backward LLM reads JSON with OOV head/lemma masked)
 
 The forward model is the experimental variable under test (its job: English → structured).
-The strong model only renders structured English JSON to natural English — a trivial
+The backward model only renders structured English JSON to natural English — a trivial
 LLM task — and never sees the OVP surface form.
 
-Writes JSONL to results/<forward_model_tag>__<strong_model_tag>.jsonl — resumable.
+Writes JSONL to results/<forward_model_tag>__<backward_model_tag>.jsonl — resumable.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def load_done(path: Path) -> set[str]:
     return done
 
 
-def translate_one(forward: Agent, strong: Agent, row: dict[str, str]) -> dict[str, Any]:
+def translate_one(forward: Agent, backward: Agent, row: dict[str, str]) -> dict[str, Any]:
     t0 = time.time()
     try:
         language = LanguageLoader.load_language("ovp")
@@ -84,8 +84,8 @@ def translate_one(forward: Agent, strong: Agent, row: dict[str, str]) -> dict[st
         target_masked = " ".join(ovp_targets_masked)
         has_placeholders = target != target_masked
 
-        # 3) STRONG: structured JSON → English (backwards)
-        s2e = SentenceToEnglishTool(agent=strong, SentenceType=SentenceTypes)
+        # 3) BACKWARD: structured JSON → English (backwards)
+        s2e = SentenceToEnglishTool(agent=backward, SentenceType=SentenceTypes)
 
         bw_parts: list[str] = []
         bw_pt = bw_ct = 0
@@ -98,7 +98,7 @@ def translate_one(forward: Agent, strong: Agent, row: dict[str, str]) -> dict[st
         t_bw = time.time() - t_bw0
         backwards = " ".join(bw_parts)
 
-        # 4) STRONG: mask_oov(structured) → English (comparator)
+        # 4) BACKWARD: mask_oov(structured) → English (comparator)
         cmp_parts: list[str] = []
         cmp_pt = cmp_ct = 0
         oov_tokens: list[str] = []
@@ -160,7 +160,7 @@ def tag_for(model: str) -> str:
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--forward-model", required=True, help="Ollama tag or 'gpt-*' for OpenAI")
-    p.add_argument("--strong-model", default="gpt-4o-mini")
+    p.add_argument("--backward-model", default="gpt-4o-mini")
     p.add_argument("--ollama-url", default="http://localhost:11434")
     p.add_argument("--parallel", type=int, default=4)
     p.add_argument("--limit", type=int, default=None)
@@ -175,7 +175,7 @@ def main() -> int:
     out_path = (
         Path(args.out)
         if args.out
-        else RESULTS / f"{tag_for(args.forward_model)}__{tag_for(args.strong_model)}.jsonl"
+        else RESULTS / f"{tag_for(args.forward_model)}__{tag_for(args.backward_model)}.jsonl"
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -213,7 +213,7 @@ def main() -> int:
     done = load_done(out_path)
     todo = [r for r in rows if r["sentence"] not in done]
 
-    print(f"forward={args.forward_model}  strong={args.strong_model}  parallel={args.parallel}",
+    print(f"forward={args.forward_model}  backward={args.backward_model}  parallel={args.parallel}",
           file=sys.stderr)
     print(f"total={len(rows)} done={len(done)} todo={len(todo)} out={out_path}", file=sys.stderr)
     if not todo:
@@ -221,13 +221,13 @@ def main() -> int:
 
     forward: Agent = make_agent(args.forward_model, temperature=0.0,
                                 ollama_url=args.ollama_url)
-    strong: Agent = make_agent(args.strong_model, temperature=0.0,
+    backward: Agent = make_agent(args.backward_model, temperature=0.0,
                                ollama_url=args.ollama_url)
 
     t_start = time.time()
     completed = 0
     with out_path.open("a") as fout, ThreadPoolExecutor(max_workers=args.parallel) as ex:
-        futures = {ex.submit(translate_one, forward, strong, r): r for r in todo}
+        futures = {ex.submit(translate_one, forward, backward, r): r for r in todo}
         for fut in as_completed(futures):
             rec = fut.result()
             fout.write(json.dumps(rec) + "\n")

@@ -32,7 +32,7 @@ for bm in $MODELS; do
     echo
     echo "=== $(date +%H:%M:%S)  backward=$bm  ==="
     uv run --project yaduha-ovp python yaduha-ovp/experiments/run_translations.py \
-        --forward-model "$FORWARD" --strong-model "$bm" \
+        --forward-model "$FORWARD" --backward-model "$bm" \
         --parallel "$PARALLEL" --out "$out"
 done
 

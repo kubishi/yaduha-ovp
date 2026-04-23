@@ -8,7 +8,7 @@ Writes results to yaduha-ovp/experiments/results/<tag>.jsonl in the same
 schema as run_translations.py, so run_metrics.py scores it directly.
 
 Loads base+adapter once, generates sequentially (HF generate is single-GPU),
-and parallelizes only the strong-model decoder calls.
+and parallelizes only the backward-model decoder calls.
 """
 
 from __future__ import annotations
@@ -105,11 +105,11 @@ def generate_structured(
 
 
 def decode_one(
-    strong: OpenAIAgent, sentence_types: tuple, structured: list[Any]
+    backward: OpenAIAgent, sentence_types: tuple, structured: list[Any]
 ) -> dict[str, Any]:
-    """Run the strong-model decoder for both backwards and comparator. Runs
+    """Run the backward-model decoder for both backwards and comparator. Runs
     sequentially here (callers batch across source sentences in parallel)."""
-    s2e = SentenceToEnglishTool(agent=strong, SentenceType=sentence_types)
+    s2e = SentenceToEnglishTool(agent=backward, SentenceType=sentence_types)
 
     ovp_targets = [clean(str(s)) for s in structured]
     ovp_targets_masked = [clean(s.str_masked()) for s in structured]
@@ -170,7 +170,7 @@ def main() -> int:
     p.add_argument("--adapter", default=None,
                    help="Path to LoRA adapter. If omitted, runs the base model — "
                         "useful for apples-to-apples HF baseline comparison.")
-    p.add_argument("--strong-model", default="gpt-4o-mini")
+    p.add_argument("--backward-model", default="gpt-4o-mini")
     p.add_argument("--tag", required=True,
                    help="Output filename stem, e.g. 'ft-qwen2.5_3b__gpt-4o-mini'")
     p.add_argument("--max-new-tokens", type=int, default=512)
@@ -207,8 +207,8 @@ def main() -> int:
     language = LanguageLoader.load_language("ovp")
     sentence_types = language.sentence_types
 
-    strong = OpenAIAgent(
-        model=args.strong_model,
+    backward = OpenAIAgent(
+        model=args.backward_model,
         api_key=__import__("os").environ["OPENAI_API_KEY"],
         temperature=0.0,
     )
@@ -272,7 +272,7 @@ def main() -> int:
                 "error": item["error"],
             }
         try:
-            decoded = decode_one(strong, sentence_types, item["structured"])
+            decoded = decode_one(backward, sentence_types, item["structured"])
             rec = {
                 "source": row["sentence"],
                 "type": row["type"],

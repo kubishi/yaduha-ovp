@@ -237,7 +237,7 @@ def plot_overall(df: pd.DataFrame, out_dir: Path) -> None:
 
 
 def plot_gap(df: pd.DataFrame, out_dir: Path) -> None:
-    """backwards − comparator gap: how much does the strong LLM 'cheat' per model."""
+    """backwards − comparator gap: how much does the backward LLM 'cheat' per model."""
     models = sorted(df["model"].unique(), key=model_sort_key)
     fig, axes = plt.subplots(1, len(METRICS), figsize=(3.5 * len(METRICS), 3.6), sharey=False)
     if len(METRICS) == 1:

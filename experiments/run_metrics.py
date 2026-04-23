@@ -1,9 +1,9 @@
 """Score translation JSONL with BLEU, chrF, chrF++, and COMET.
 
 Computes drift between `source` (original English) and each of:
-  simple       — STRONG decode of structured OVP Sentence(s)
-  comparator   — STRONG decode of structure with OOV vocab masked
-  backwards    — STRONG decode of the OVP-language target string (round-trip)
+  simple       — BACKWARD decode of structured OVP Sentence(s)
+  comparator   — BACKWARD decode of structure with OOV vocab masked
+  backwards    — BACKWARD decode of the OVP-language target string (round-trip)
 
 For each metric+arm, adds <metric>_<arm> to the record (e.g., bleu_simple,
 chrfpp_backwards, comet_comparator).
