@@ -1,7 +1,2 @@
 model,n,chrf_mean,comet_mean,placeholder_rate,placeholder_preserved,placeholder_expected
-gpt-4o-mini,40,0.928,0.927,0.625,5,8
-llama3.2:1b,40,0.484,0.742,0.0,0,8
-llama3.2:3b,40,0.68,0.794,0.5,4,8
-llama3.1:8b,40,0.747,0.819,0.125,1,8
-qwen2.5:3b,40,0.775,0.843,0.375,3,8
-qwen2.5:7b,40,0.761,0.838,0.25,2,8
+ft-qwen2.5-3b-backward-fullopen,40,0.802,0.869,1.0,8,8
